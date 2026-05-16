@@ -38,7 +38,8 @@
     "fontSize": "Ukuran Font",
     "fontFamily": "Jenis Font",
     "scrollback": "Baris Scrollback",
-    "profiles": "Profil"
+    "profiles": "Profil",
+    "gpuRenderer": "Akselerasi GPU"
   },
   "profile": {
     "shell": "Shell",
@@ -71,5 +72,13 @@
     "install": "Instal & Mulai Ulang",
     "error": "Kesalahan pembaruan",
     "check": "Periksa Pembaruan"
+  },
+  "broadcast": {
+    "toggle": "Alih Siaran",
+    "on": "Siaran: NYALA",
+    "off": "Siaran: MATI"
+  },
+  "status": {
+    "local": "Lokal"
   }
 }

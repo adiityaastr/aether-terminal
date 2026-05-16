@@ -38,7 +38,8 @@
     "fontSize": "Font Size",
     "fontFamily": "Font Family",
     "scrollback": "Scrollback Lines",
-    "profiles": "Profiles"
+    "profiles": "Profiles",
+    "gpuRenderer": "GPU Acceleration"
   },
   "profile": {
     "shell": "Shell",
@@ -71,5 +72,13 @@
     "install": "Install & Restart",
     "error": "Update error",
     "check": "Check for Updates"
+  },
+  "broadcast": {
+    "toggle": "Toggle Broadcast",
+    "on": "Broadcast: ON",
+    "off": "Broadcast: OFF"
+  },
+  "status": {
+    "local": "Local"
   }
 }

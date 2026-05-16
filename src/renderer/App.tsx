@@ -7,6 +7,7 @@ import SettingsPanel from './components/SettingsPanel';
 import ConnectionDialog from './components/ConnectionDialog';
 import ProfilesPanel from './components/ProfilesPanel';
 import SFTPPanel from './components/SFTPPanel';
+import StatusBar from './components/StatusBar';
 import NotificationToast from './components/NotificationToast';
 import UpdateNotification from './components/UpdateNotification';
 import { useKeybindingHandler, useKeybindings } from './KeybindingContext';
@@ -111,6 +112,11 @@ function getFirstLeafId(node: PaneNode): string {
   return getFirstLeafId(node.children[0]);
 }
 
+function findLeafById(node: PaneNode, id: string): PaneLeaf | null {
+  if (node.type === 'leaf') return node.id === id ? node : null;
+  return findLeafById(node.children[0], id) || findLeafById(node.children[1], id);
+}
+
 function checkRemoteConnection(node: PaneNode): boolean {
   if (node.type === 'leaf') {
     return !!node.connectionType && node.connectionType !== 'local';
@@ -177,6 +183,15 @@ useEffect(() => {
   }, []);
 
   const activeTab = tabs.find((t) => t.id === activeId)!;
+
+  const focusedLeaf = findLeafById(activeTab.paneTree, activeTab.focusedPaneId);
+  const connectionInfo = focusedLeaf ? {
+    type: focusedLeaf.connectionType || 'local',
+    detail: focusedLeaf.connectionType === 'ssh' ? `${(focusedLeaf.connectionOptions as any)?.username || ''}@${(focusedLeaf.connectionOptions as any)?.host || ''}` :
+            focusedLeaf.connectionType === 'serial' ? `${(focusedLeaf.connectionOptions as any)?.path || ''}` :
+            focusedLeaf.connectionType === 'telnet' ? `${(focusedLeaf.connectionOptions as any)?.host || ''}:${(focusedLeaf.connectionOptions as any)?.port || ''}` :
+            undefined,
+  } : undefined;
 
   const handleNew = useCallback(() => {
     const tab = createTabState();
@@ -353,6 +368,7 @@ useEffect(() => {
       <SFTPPanel visible={sftpOpen} onClose={() => setSftpOpen(false)} />
       <NotificationToast toasts={toasts} onDismiss={dismissToast} />
       <UpdateNotification />
+      <StatusBar connectionInfo={connectionInfo} />
     </div>
   );
 }

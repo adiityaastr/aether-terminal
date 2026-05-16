@@ -370,6 +370,29 @@ body {
 .toast-success { background: rgba(166,227,161,0.15); color: #a6e3a1; border: 1px solid #a6e3a1; }
 @keyframes toast-in { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
+/* Status Bar */
+.status-bar {
+  height: 24px;
+  background: var(--titlebar-bg, var(--surface));
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 11px;
+  color: var(--text-secondary, #888);
+  flex-shrink: 0;
+}
+
+.status-bar-left, .status-bar-center, .status-bar-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.status-bar-center { justify-content: center; }
+.status-bar-right { justify-content: flex-end; }
+.status-item { padding: 0 4px; }
+
 /* Drag feedback for tabs */
 .tab-item[draggable="true"]:active { opacity: 0.5; }
 
