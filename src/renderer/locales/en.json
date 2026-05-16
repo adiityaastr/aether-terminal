@@ -40,6 +40,10 @@
     "scrollback": "Scrollback Lines",
     "profiles": "Profiles"
   },
+  "profile": {
+    "shell": "Shell",
+    "shellPlaceholder": "Default shell"
+  },
   "connection": {
     "disconnected": "Connection lost",
     "reconnect": "Reconnect",
@@ -55,5 +59,7 @@
     "zoomIn": "Zoom In",
     "zoomOut": "Zoom Out",
     "resetZoom": "Reset Zoom"
-  }
+  },
+  "pasteWarning": "Multi-line Paste Warning",
+  "pasteWarningDetail": "You are about to paste text containing multiple lines. This may execute multiple commands. Continue?"
 }

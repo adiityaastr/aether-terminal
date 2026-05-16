@@ -5,6 +5,7 @@ import { SearchAddon } from '@xterm/addon-search';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { useTheme } from '../ThemeContext';
 import { useConfig } from '../ConfigContext';
+import i18n from '../i18n';
 import SearchBar from './SearchBar';
 import TerminalContextMenu from './TerminalContextMenu';
 import ConnectionOverlay from './ConnectionOverlay';
@@ -161,7 +162,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
     let id: string | null = null;
 
     const connectLocal = async () => {
-      id = await window.electronAPI.invoke('pty:spawn', xterm.cols, xterm.rows) as string;
+      id = await window.electronAPI.invoke('pty:spawn', xterm.cols, xterm.rows, (connectionOptions as import('../../common/types').LocalConnectOpts)?.shell) as string;
       sessionIdRef.current = id;
       if (!mountedRef.current) return;
       setConnectionState('connected');

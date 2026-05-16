@@ -37,6 +37,10 @@ export interface AppConfig {
 
 export type ConnectionType = 'local' | 'ssh' | 'serial' | 'telnet';
 
+export interface LocalConnectOpts {
+  shell?: string;
+}
+
 export interface SSHConnectOpts {
   host: string;
   port: number;
@@ -62,7 +66,7 @@ export interface TelnetConnectOpts {
   rows: number;
 }
 
-export type ConnectionOpts = SSHConnectOpts | SerialConnectOpts | TelnetConnectOpts;
+export type ConnectionOpts = LocalConnectOpts | SSHConnectOpts | SerialConnectOpts | TelnetConnectOpts;
 
 export interface PaneConnection {
   type: ConnectionType;

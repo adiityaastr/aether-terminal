@@ -42,16 +42,17 @@ function saveHistory() {
 migrateHistoryFile();
 loadHistory();
 
-function getShell(): string {
+function getShell(customShell?: string): string {
+  if (customShell) return customShell;
   if (process.platform === 'win32') return 'powershell.exe';
   return process.env.SHELL || '/bin/bash';
 }
 
 export function setupPtyManager() {
-  ipcMain.handle('pty:spawn', (event, cols: number, rows: number) => {
+  ipcMain.handle('pty:spawn', (event, cols: number, rows: number, shell?: string) => {
     const id = String(++idCounter);
-    const shell = getShell();
-    const proc = pty.spawn(shell, [], {
+    const resolvedShell = getShell(shell);
+    const proc = pty.spawn(resolvedShell, [], {
       name: 'xterm-256color',
       cols,
       rows,
@@ -60,7 +61,7 @@ export function setupPtyManager() {
     });
 
     ptys.set(id, proc);
-    log.info(`PTY spawned: id=${id}, shell=${shell}, pid=${proc.pid}`);
+    log.info(`PTY spawned: id=${id}, shell=${resolvedShell}, pid=${proc.pid}`);
 
     proc.onData((data) => {
       event.sender.send(`pty:data:${id}`, data);

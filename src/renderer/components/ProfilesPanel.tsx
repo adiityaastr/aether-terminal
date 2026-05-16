@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Profile } from '../../common/types';
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export default function ProfilesPanel({ visible, onClose, onConnect }: Props) {
+  const { t } = useTranslation();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
 
@@ -32,7 +34,7 @@ export default function ProfilesPanel({ visible, onClose, onConnect }: Props) {
 
   const connectProfile = (profile: Profile) => {
     const optsMap: Record<string, any> = {
-      local: {},
+      local: { shell: profile.shell || undefined },
       ssh: { host: profile.sshHost, port: profile.sshPort || 22, username: profile.sshUser, privateKeyPath: profile.sshKeyPath, cols: 80, rows: 24 },
       serial: { path: profile.serialPort, baudRate: profile.serialBaud || 9600 },
       telnet: { host: profile.telnetHost, port: profile.telnetPort || 23, cols: 80, rows: 24 },
@@ -101,6 +103,10 @@ function ProfileEditor({ profile, onSave, onCancel }: { profile: Profile; onSave
           <option value="serial">Serial</option>
           <option value="telnet">Telnet</option>
         </select>
+      </div>
+      <div className="setting-group">
+        <label>{t('profile.shell')}</label>
+        <input value={p.shell || ''} onChange={(e) => setP({ ...p, shell: e.target.value || undefined })} placeholder={t('profile.shellPlaceholder')} />
       </div>
       {p.type === 'ssh' && (
         <>
