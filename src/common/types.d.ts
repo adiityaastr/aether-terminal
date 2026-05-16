@@ -34,3 +34,47 @@ export interface AppConfig {
   profiles: Profile[];
   restoreSession: boolean;
 }
+
+export type ConnectionType = 'local' | 'ssh' | 'serial' | 'telnet';
+
+export interface SSHConnectOpts {
+  host: string;
+  port: number;
+  username: string;
+  password?: string;
+  privateKeyPath?: string;
+  cols: number;
+  rows: number;
+}
+
+export interface SerialConnectOpts {
+  path: string;
+  baudRate: number;
+  dataBits?: 5 | 6 | 7 | 8;
+  parity?: 'none' | 'even' | 'odd';
+  stopBits?: 1 | 1.5 | 2;
+}
+
+export interface TelnetConnectOpts {
+  host: string;
+  port: number;
+  cols: number;
+  rows: number;
+}
+
+export type ConnectionOpts = SSHConnectOpts | SerialConnectOpts | TelnetConnectOpts;
+
+export interface PaneConnection {
+  type: ConnectionType;
+  sessionId?: string;
+  opts?: ConnectionOpts;
+}
+
+export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'error';
+
+export interface ToastMessage {
+  id: string;
+  type: 'error' | 'warning' | 'info' | 'success';
+  message: string;
+  autoDismiss?: number;
+}
