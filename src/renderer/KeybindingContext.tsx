@@ -13,10 +13,15 @@ const DEFAULT_BINDINGS: Omit<Keybinding, 'key'>[] = [
   { id: 'tab:next', label: 'Next Tab', defaultKey: 'Ctrl+Tab' },
   { id: 'tab:prev', label: 'Previous Tab', defaultKey: 'Ctrl+Shift+Tab' },
   { id: 'pane:splitH', label: 'Split Horizontal', defaultKey: 'Ctrl+Shift+H' },
-  { id: 'pane:splitV', label: 'Split Vertical', defaultKey: 'Ctrl+Shift+V' },
+  { id: 'pane:splitV', label: 'Split Vertical', defaultKey: 'Ctrl+Alt+V' },
   { id: 'pane:close', label: 'Close Pane', defaultKey: 'Ctrl+Shift+W' },
   { id: 'terminal:search', label: 'Find', defaultKey: 'Ctrl+F' },
   { id: 'palette:open', label: 'Command Palette', defaultKey: 'Ctrl+Shift+P' },
+  { id: 'terminal:copy', label: 'Copy', defaultKey: 'Ctrl+Shift+C' },
+  { id: 'terminal:paste', label: 'Paste', defaultKey: 'Ctrl+Shift+V' },
+  { id: 'terminal:zoomIn', label: 'Zoom In', defaultKey: 'Ctrl+=' },
+  { id: 'terminal:zoomOut', label: 'Zoom Out', defaultKey: 'Ctrl+-' },
+  { id: 'terminal:zoomReset', label: 'Reset Zoom', defaultKey: 'Ctrl+0' },
 ];
 
 function loadOverrides(): Record<string, string> {
