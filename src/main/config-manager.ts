@@ -25,6 +25,7 @@ export interface AppConfig {
   defaultProfile: string;
   profiles: Profile[];
   restoreSession: boolean;
+  scrollback: number;
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -34,6 +35,7 @@ const DEFAULT_CONFIG: AppConfig = {
   defaultProfile: 'default',
   profiles: [{ id: 'default', name: 'Default', type: 'local' }],
   restoreSession: true,
+  scrollback: 10000,
 };
 
 const configDir = path.join(app.getPath('userData'));

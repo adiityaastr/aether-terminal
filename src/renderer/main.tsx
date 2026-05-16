@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from './ThemeContext';
+import { ConfigProvider } from './ConfigContext';
 import { KeybindingProvider } from './KeybindingContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import App from './App';
@@ -18,9 +19,11 @@ window.addEventListener('unhandledrejection', (e) => {
 createRoot(document.getElementById('root')!).render(
   <ErrorBoundary>
     <ThemeProvider>
-      <KeybindingProvider>
-        <App />
-      </KeybindingProvider>
+      <ConfigProvider>
+        <KeybindingProvider>
+          <App />
+        </KeybindingProvider>
+      </ConfigProvider>
     </ThemeProvider>
   </ErrorBoundary>
 );
