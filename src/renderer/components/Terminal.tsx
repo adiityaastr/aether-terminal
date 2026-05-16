@@ -38,6 +38,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
   const fitRef = useRef<FitAddon | null>(null);
   const searchRef = useRef<SearchAddon | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const mountedRef = useRef(true);
   const [showSearch, setShowSearch] = useState(false);
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
@@ -149,11 +150,12 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
         window.electronAPI.send('pty:input', id, data);
       });
 
-      window.electronAPI.on(`pty:exit:${id}`, () => {
-        xterm.write('\r\n\x1b[90m[Process exited]\x1b[0m\r\n');
-        setConnectionState('disconnected');
-        onConnectionStateChange?.('disconnected', id);
-      });
+window.electronAPI.on(`pty:exit:${id}`, () => {
+          xterm.write('\r\n\x1b[90m[Process exited]\x1b[0m\r\n');
+          if (!mountedRef.current) return;
+          setConnectionState('disconnected');
+          onConnectionStateChange?.('disconnected', id);
+        });
     };
 
     const connectSSH = async () => {
@@ -168,15 +170,18 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
         xterm.onData((data) => { window.electronAPI.send('ssh:input', id, data); });
         window.electronAPI.on(`ssh:exit:${id}`, () => {
           xterm.write('\r\n\x1b[90m[SSH session ended]\x1b[0m\r\n');
+          if (!mountedRef.current) return;
           setConnectionState('disconnected');
           onConnectionStateChange?.('disconnected', id);
         });
         window.electronAPI.on(`ssh:error:${id}`, (errMsg: unknown) => {
           xterm.write(`\r\n\x1b[31m[Error: ${errMsg}]\x1b[0m\r\n`);
+          if (!mountedRef.current) return;
           setConnectionState('error');
           onConnectionStateChange?.('error', id);
         });
       } catch (err: unknown) {
+        if (!mountedRef.current) return;
         xterm.write(`\r\n\x1b[31m[Connection failed: ${err}]\x1b[0m\r\n`);
         setConnectionState('error');
         onConnectionStateChange?.('error');
@@ -195,15 +200,18 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
         xterm.onData((data) => { window.electronAPI.send('serial:input', id, data); });
         window.electronAPI.on(`serial:exit:${id}`, () => {
           xterm.write('\r\n\x1b[90m[Serial disconnected]\x1b[0m\r\n');
+          if (!mountedRef.current) return;
           setConnectionState('disconnected');
           onConnectionStateChange?.('disconnected', id);
         });
         window.electronAPI.on(`serial:error:${id}`, (errMsg: unknown) => {
           xterm.write(`\r\n\x1b[31m[Error: ${errMsg}]\x1b[0m\r\n`);
+          if (!mountedRef.current) return;
           setConnectionState('error');
           onConnectionStateChange?.('error', id);
         });
       } catch (err: unknown) {
+        if (!mountedRef.current) return;
         xterm.write(`\r\n\x1b[31m[Connection failed: ${err}]\x1b[0m\r\n`);
         setConnectionState('error');
         onConnectionStateChange?.('error');
@@ -222,15 +230,18 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
         xterm.onData((data) => { window.electronAPI.send('telnet:input', id, data); });
         window.electronAPI.on(`telnet:exit:${id}`, () => {
           xterm.write('\r\n\x1b[90m[Telnet session ended]\x1b[0m\r\n');
+          if (!mountedRef.current) return;
           setConnectionState('disconnected');
           onConnectionStateChange?.('disconnected', id);
         });
         window.electronAPI.on(`telnet:error:${id}`, (errMsg: unknown) => {
           xterm.write(`\r\n\x1b[31m[Error: ${errMsg}]\x1b[0m\r\n`);
+          if (!mountedRef.current) return;
           setConnectionState('error');
           onConnectionStateChange?.('error', id);
         });
       } catch (err: unknown) {
+        if (!mountedRef.current) return;
         xterm.write(`\r\n\x1b[31m[Connection failed: ${err}]\x1b[0m\r\n`);
         setConnectionState('error');
         onConnectionStateChange?.('error');
@@ -258,6 +269,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
     resizeObserver.observe(container);
 
     return () => {
+      mountedRef.current = false;
       resizeObserver.disconnect();
       window.removeEventListener('terminal:clear', clearHandler);
       container.removeEventListener('contextmenu', handleContextMenu);
