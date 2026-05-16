@@ -376,6 +376,38 @@ body {
 /* SFTP progress */
 .sftp-progress { height: 3px; background: var(--accent); border-radius: 2px; margin: 4px 0; }
 
+/* Update Notification */
+.update-notification {
+  position: fixed;
+  bottom: 32px;
+  right: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 1000;
+  color: var(--text);
+  font-size: 13px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.update-notification button {
+  background: var(--accent);
+  color: #111;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+.update-notification button:hover { opacity: 0.85; }
+.update-progress { display: flex; align-items: center; gap: 8px; }
+.progress-bar { width: 120px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.3s ease; }
+
 /* Profiles */
 .profile-list { display: flex; flex-direction: column; gap: 8px; }
 .profile-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }

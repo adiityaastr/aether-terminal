@@ -61,5 +61,15 @@
     "resetZoom": "Reset Zoom"
   },
   "pasteWarning": "Peringatan Tempel Multi-baris",
-  "pasteWarningDetail": "Anda akan menempelkan teks yang berisi beberapa baris. Ini dapat menjalankan beberapa perintah. Lanjutkan?"
+  "pasteWarningDetail": "Anda akan menempelkan teks yang berisi beberapa baris. Ini dapat menjalankan beberapa perintah. Lanjutkan?",
+  "update": {
+    "available": "Pembaruan tersedia",
+    "download": "Unduh",
+    "dismiss": "Tutup",
+    "downloading": "Mengunduh pembaruan...",
+    "downloaded": "Pembaruan telah diunduh",
+    "install": "Instal & Mulai Ulang",
+    "error": "Kesalahan pembaruan",
+    "check": "Periksa Pembaruan"
+  }
 }

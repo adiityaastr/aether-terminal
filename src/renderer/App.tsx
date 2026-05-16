@@ -8,8 +8,10 @@ import ConnectionDialog from './components/ConnectionDialog';
 import ProfilesPanel from './components/ProfilesPanel';
 import SFTPPanel from './components/SFTPPanel';
 import NotificationToast from './components/NotificationToast';
+import UpdateNotification from './components/UpdateNotification';
 import { useKeybindingHandler, useKeybindings } from './KeybindingContext';
 import { useTheme } from './ThemeContext';
+import i18n from './i18n';
 import type { ConnectionType, ConnectionOpts, ConnectionState, ToastMessage } from '../common/types';
 
 interface TabState extends Tab {
@@ -260,6 +262,7 @@ useEffect(() => {
       { id: 'tab:new', label: 'New Tab', category: 'Tab', shortcut: bindings.find((b) => b.id === 'tab:new')?.key, action: handleNew },
       { id: 'tab:close', label: 'Close Tab', category: 'Tab', action: () => handleClose(activeId) },
       { id: 'sftp:open', label: 'Open SFTP Browser', category: 'SFTP', action: () => setSftpOpen(true) },
+        { id: 'update:check', label: i18n.t('update.check'), category: 'Help', action: () => window.electronAPI.invoke('update:check') },
       { id: 'pane:splitH', label: 'Split Horizontal', category: 'Pane', action: () => handleSplit(activeTab.focusedPaneId, 'horizontal') },
       { id: 'pane:splitV', label: 'Split Vertical', category: 'Pane', action: () => handleSplit(activeTab.focusedPaneId, 'vertical') },
       { id: 'pane:close', label: 'Close Pane', category: 'Pane', action: () => handleClosePane(activeTab.focusedPaneId) },
@@ -349,6 +352,7 @@ useEffect(() => {
       />
       <SFTPPanel visible={sftpOpen} onClose={() => setSftpOpen(false)} />
       <NotificationToast toasts={toasts} onDismiss={dismissToast} />
+      <UpdateNotification />
     </div>
   );
 }

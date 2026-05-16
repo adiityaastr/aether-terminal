@@ -1,7 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell, globalShortcut, screen, clipboard, dialog } from 'electron';
 import path from 'path';
 import log from 'electron-log';
-import { autoUpdater } from 'electron-updater';
 import { setupPtyManager, killAllPtys } from './pty-manager';
 import { setupConfigManager } from './config-manager';
 import { setupSessionManager } from './session-manager';
@@ -10,6 +9,7 @@ import { setupSFTPManager } from './sftp-manager';
 import { setupSerialManager } from './serial-manager';
 import { setupTelnetManager } from './telnet-manager';
 import { setupPluginSystem } from './plugin-host';
+import { initUpdater, checkForUpdates, downloadUpdate, quitAndInstall } from './updater';
 
 log.initialize();
 log.info('Aether starting...');
@@ -112,29 +112,14 @@ app.whenReady().then(() => {
     log.warn(`Failed to register global hotkey: ${hotkey}`);
   }
 
-  // Auto-updater (GitHub Releases)
-  autoUpdater.logger = log;
-  autoUpdater.autoDownload = false;
+  initUpdater(mainWindow!);
 
-  autoUpdater.on('update-available', (info) => {
-    mainWindow?.webContents.send('updater:available', { version: info.version, releaseNotes: info.releaseNotes });
-  });
+  ipcMain.handle('update:check', () => checkForUpdates());
+  ipcMain.handle('update:download', () => downloadUpdate());
+  ipcMain.handle('update:install', () => quitAndInstall());
 
-  autoUpdater.on('download-progress', (progress) => {
-    mainWindow?.webContents.send('updater:progress', progress.percent);
-  });
-
-  autoUpdater.on('update-downloaded', () => {
-    mainWindow?.webContents.send('updater:ready');
-  });
-
-  ipcMain.handle('updater:check', () => autoUpdater.checkForUpdates());
-  ipcMain.handle('updater:download', () => autoUpdater.downloadUpdate());
-  ipcMain.on('updater:install', () => autoUpdater.quitAndInstall());
-
-  // Check for updates after 5 seconds
   setTimeout(() => {
-    autoUpdater.checkForUpdates().catch(() => {});
+    checkForUpdates();
   }, 5000);
 });
 

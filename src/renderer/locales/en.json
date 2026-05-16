@@ -61,5 +61,15 @@
     "resetZoom": "Reset Zoom"
   },
   "pasteWarning": "Multi-line Paste Warning",
-  "pasteWarningDetail": "You are about to paste text containing multiple lines. This may execute multiple commands. Continue?"
+  "pasteWarningDetail": "You are about to paste text containing multiple lines. This may execute multiple commands. Continue?",
+  "update": {
+    "available": "Update available",
+    "download": "Download",
+    "dismiss": "Dismiss",
+    "downloading": "Downloading update...",
+    "downloaded": "Update downloaded",
+    "install": "Install & Restart",
+    "error": "Update error",
+    "check": "Check for Updates"
+  }
 }
