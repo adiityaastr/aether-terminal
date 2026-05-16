@@ -442,3 +442,57 @@ body {
 .profile-detail { font-size: 11px; opacity: 0.4; font-family: monospace; }
 .profile-actions { display: flex; gap: 6px; }
 .profile-editor { display: flex; flex-direction: column; gap: 12px; }
+
+/* Command History Panel */
+.history-search {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.history-search:focus { border-color: var(--accent); }
+
+.history-clear-btn {
+  padding: 8px 14px;
+  background: var(--red);
+  color: #111;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: opacity 0.1s;
+}
+.history-clear-btn:hover { opacity: 0.85; }
+
+.history-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.history-entry {
+  padding: 6px 12px;
+  cursor: pointer;
+  color: var(--text);
+  font-family: monospace;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid var(--border);
+}
+.history-entry:last-child { border-bottom: none; }
+.history-entry:hover { background: rgba(255,255,255,0.04); }
+
+.history-empty {
+  text-align: center;
+  opacity: 0.4;
+  padding: 20px;
+}

@@ -9,6 +9,8 @@ interface AppConfig {
   restoreSession: boolean;
   scrollback: number;
   gpuRenderer: boolean;
+  windowOpacity: number;
+  windowAcrylic: boolean;
 }
 
 interface ConfigContextValue {
@@ -33,6 +35,8 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
     restoreSession: true,
     scrollback: 10000,
     gpuRenderer: true,
+    windowOpacity: 1.0,
+    windowAcrylic: false,
   });
 
   useEffect(() => {
@@ -46,6 +50,14 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
     setConfig(result);
     return result;
   }, []);
+
+  useEffect(() => {
+    window.electronAPI.invoke('window:setOpacity', config.windowOpacity ?? 1);
+  }, [config.windowOpacity]);
+
+  useEffect(() => {
+    window.electronAPI.invoke('window:setAcrylic', config.windowAcrylic ?? false);
+  }, [config.windowAcrylic]);
 
   return (
     <ConfigContext.Provider value={{

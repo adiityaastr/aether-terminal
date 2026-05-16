@@ -7,6 +7,7 @@ import SettingsPanel from './components/SettingsPanel';
 import ConnectionDialog from './components/ConnectionDialog';
 import ProfilesPanel from './components/ProfilesPanel';
 import SFTPPanel from './components/SFTPPanel';
+import CommandHistoryPanel from './components/CommandHistoryPanel';
 import StatusBar from './components/StatusBar';
 import NotificationToast from './components/NotificationToast';
 import UpdateNotification from './components/UpdateNotification';
@@ -146,6 +147,7 @@ export default function App() {
   const [connDialogOpen, setConnDialogOpen] = useState(false);
   const [profilesOpen, setProfilesOpen] = useState(false);
   const [sftpOpen, setSftpOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [reconnectKeys, setReconnectKeys] = useState<Record<string, number>>({});
   const [broadcasting, setBroadcasting] = useState(false);
@@ -299,6 +301,7 @@ useEffect(() => {
       { id: 'tab:new', label: 'New Tab', category: 'Tab', shortcut: bindings.find((b) => b.id === 'tab:new')?.key, action: handleNew },
       { id: 'tab:close', label: 'Close Tab', category: 'Tab', action: () => handleClose(activeId) },
       { id: 'sftp:open', label: 'Open SFTP Browser', category: 'SFTP', action: () => setSftpOpen(true) },
+      { id: 'history:open', label: i18n.t('history.title'), category: 'History', action: () => setHistoryOpen(true) },
         { id: 'update:check', label: i18n.t('update.check'), category: 'Help', action: () => window.electronAPI.invoke('update:check') },
       { id: 'pane:splitH', label: 'Split Horizontal', category: 'Pane', action: () => handleSplit(activeTab.focusedPaneId, 'horizontal') },
       { id: 'pane:splitV', label: 'Split Vertical', category: 'Pane', action: () => handleSplit(activeTab.focusedPaneId, 'vertical') },
@@ -392,6 +395,7 @@ useEffect(() => {
         }}
       />
       <SFTPPanel visible={sftpOpen} onClose={() => setSftpOpen(false)} />
+      <CommandHistoryPanel visible={historyOpen} onClose={() => setHistoryOpen(false)} />
       <NotificationToast toasts={toasts} onDismiss={dismissToast} />
       <UpdateNotification />
       <StatusBar connectionInfo={connectionInfo} />

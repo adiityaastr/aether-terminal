@@ -14,6 +14,7 @@ export default function SettingsPanel({ visible, onClose, onOpenProfiles }: Prop
   const { themeId, setThemeId, availableThemes } = useTheme();
   const { bindings, resetAll } = useKeybindings();
   const { scrollback, updateConfig, gpuRenderer } = useConfig();
+  const config = useConfig();
   const { t, i18n } = useTranslation();
 
   if (!visible) return null;
@@ -65,6 +66,27 @@ export default function SettingsPanel({ visible, onClose, onOpenProfiles }: Prop
               type="checkbox"
               checked={gpuRenderer !== false}
               onChange={() => updateConfig({ gpuRenderer: !gpuRenderer })}
+            />
+          </div>
+          <div className="setting-group">
+            <label>{t('settings.windowOpacity')}</label>
+            <input
+              type="range"
+              min="10"
+              max="100"
+              step="5"
+              value={Math.round((config.config.windowOpacity ?? 1) * 100)}
+              onChange={(e) => updateConfig({ windowOpacity: parseInt(e.target.value) / 100 })}
+              style={{ width: '100%' }}
+            />
+            <span>{Math.round((config.config.windowOpacity ?? 1) * 100)}%</span>
+          </div>
+          <div className="setting-group">
+            <label>{t('settings.windowAcrylic')}</label>
+            <input
+              type="checkbox"
+              checked={config.config.windowAcrylic ?? false}
+              onChange={() => updateConfig({ windowAcrylic: !(config.config.windowAcrylic ?? false) })}
             />
           </div>
           <div className="setting-group">

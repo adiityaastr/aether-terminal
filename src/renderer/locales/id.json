@@ -39,7 +39,9 @@
     "fontFamily": "Jenis Font",
     "scrollback": "Baris Scrollback",
     "profiles": "Profil",
-    "gpuRenderer": "Akselerasi GPU"
+    "gpuRenderer": "Akselerasi GPU",
+    "windowOpacity": "Opasitas Jendela",
+    "windowAcrylic": "Efek Acrylic (Windows)"
   },
   "profile": {
     "shell": "Shell",
@@ -80,5 +82,12 @@
   },
   "status": {
     "local": "Lokal"
+  },
+  "history": {
+    "title": "Riwayat Perintah",
+    "search": "Filter perintah...",
+    "clear": "Hapus Riwayat",
+    "clearConfirm": "Apakah Anda yakin ingin menghapus semua riwayat perintah?",
+    "empty": "Tidak ada perintah dalam riwayat"
   }
 }

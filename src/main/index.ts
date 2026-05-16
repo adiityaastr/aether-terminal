@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, shell, globalShortcut, screen, clipboard, 
 import path from 'path';
 import log from 'electron-log';
 import { setupPtyManager, killAllPtys } from './pty-manager';
-import { setupConfigManager } from './config-manager';
+import { setupConfigManager, getConfig } from './config-manager';
 import { setupSessionManager } from './session-manager';
 import { setupSSHManager } from './ssh-manager';
 import { setupSFTPManager } from './sftp-manager';
@@ -34,6 +34,16 @@ ipcMain.handle('dialog:openFile', async () => {
 ipcMain.handle('dialog:saveFile', async (_e, filename: string) => {
   const result = await dialog.showSaveDialog({ defaultPath: filename });
   return result.canceled ? null : result.filePath;
+});
+
+ipcMain.handle('window:setOpacity', (_e, opacity: number) => {
+  if (mainWindow) mainWindow.setOpacity(Math.max(0.1, Math.min(1, opacity)));
+});
+
+ipcMain.handle('window:setAcrylic', (_e, enabled: boolean) => {
+  if (mainWindow && process.platform === 'win32') {
+    mainWindow.setBackgroundMaterial(enabled ? 'acrylic' : 'none');
+  }
 });
 
 // Process-level error handlers
@@ -73,6 +83,7 @@ ipcMain.on('hotkey:toggle', () => toggleQuakeWindow());
 ipcMain.handle('hotkey:isQuake', () => isQuakeVisible);
 
 function createWindow() {
+  const cfg = getConfig();
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -80,12 +91,17 @@ function createWindow() {
     minHeight: 400,
     frame: false,
     titleBarStyle: 'hidden',
+    backgroundMaterial: cfg.windowAcrylic && process.platform === 'win32' ? 'acrylic' : undefined,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
     },
   });
+
+  if (cfg.windowOpacity !== undefined && cfg.windowOpacity !== 1.0) {
+    mainWindow.setOpacity(cfg.windowOpacity);
+  }
 
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
   mainWindow.on('closed', () => { mainWindow = null; });

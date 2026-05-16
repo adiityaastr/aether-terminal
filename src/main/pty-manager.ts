@@ -112,6 +112,15 @@ export function setupPtyManager() {
     return matches;
   });
 
+  ipcMain.handle('history:getAll', () => {
+    return [...historySet].sort().slice(-100);
+  });
+
+  ipcMain.handle('history:clear', () => {
+    historySet.clear();
+    saveHistory();
+  });
+
   // Autocomplete: path completion
   ipcMain.handle('autocomplete:paths', (_event, partial: string, cwd: string) => {
     try {

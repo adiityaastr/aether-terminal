@@ -27,6 +27,8 @@ export interface AppConfig {
   restoreSession: boolean;
   scrollback: number;
   gpuRenderer: boolean;
+  windowOpacity: number;
+  windowAcrylic: boolean;
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -38,6 +40,8 @@ const DEFAULT_CONFIG: AppConfig = {
   restoreSession: true,
   scrollback: 10000,
   gpuRenderer: true,
+  windowOpacity: 1.0,
+  windowAcrylic: false,
 };
 
 const configDir = path.join(app.getPath('userData'));

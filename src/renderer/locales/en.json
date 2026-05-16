@@ -39,7 +39,9 @@
     "fontFamily": "Font Family",
     "scrollback": "Scrollback Lines",
     "profiles": "Profiles",
-    "gpuRenderer": "GPU Acceleration"
+    "gpuRenderer": "GPU Acceleration",
+    "windowOpacity": "Window Opacity",
+    "windowAcrylic": "Acrylic Effect (Windows)"
   },
   "profile": {
     "shell": "Shell",
@@ -80,5 +82,12 @@
   },
   "status": {
     "local": "Local"
+  },
+  "history": {
+    "title": "Command History",
+    "search": "Filter commands...",
+    "clear": "Clear History",
+    "clearConfirm": "Are you sure you want to clear all command history?",
+    "empty": "No commands in history"
   }
 }
