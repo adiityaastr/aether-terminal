@@ -1,0 +1,39 @@
+{
+  "app": {
+    "title": "TerminalOp"
+  },
+  "tabs": {
+    "newTab": "New Tab",
+    "closeTab": "Close Tab",
+    "terminal": "Terminal"
+  },
+  "pane": {
+    "splitH": "Split Horizontal",
+    "splitV": "Split Vertical",
+    "close": "Close Pane"
+  },
+  "search": {
+    "placeholder": "Search...",
+    "caseSensitive": "Case Sensitive",
+    "previous": "Previous",
+    "next": "Next",
+    "close": "Close"
+  },
+  "palette": {
+    "placeholder": "Type a command...",
+    "noResults": "No commands found"
+  },
+  "sftp": {
+    "up": "Up",
+    "refresh": "Refresh",
+    "loading": "Loading...",
+    "delete": "Delete"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": "Theme",
+    "language": "Language",
+    "fontSize": "Font Size",
+    "fontFamily": "Font Family"
+  }
+}

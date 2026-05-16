@@ -1,0 +1,39 @@
+{
+  "app": {
+    "title": "TerminalOp"
+  },
+  "tabs": {
+    "newTab": "Tab Baru",
+    "closeTab": "Tutup Tab",
+    "terminal": "Terminal"
+  },
+  "pane": {
+    "splitH": "Bagi Horizontal",
+    "splitV": "Bagi Vertikal",
+    "close": "Tutup Panel"
+  },
+  "search": {
+    "placeholder": "Cari...",
+    "caseSensitive": "Huruf Besar/Kecil",
+    "previous": "Sebelumnya",
+    "next": "Berikutnya",
+    "close": "Tutup"
+  },
+  "palette": {
+    "placeholder": "Ketik perintah...",
+    "noResults": "Tidak ada perintah ditemukan"
+  },
+  "sftp": {
+    "up": "Atas",
+    "refresh": "Muat Ulang",
+    "loading": "Memuat...",
+    "delete": "Hapus"
+  },
+  "settings": {
+    "title": "Pengaturan",
+    "theme": "Tema",
+    "language": "Bahasa",
+    "fontSize": "Ukuran Font",
+    "fontFamily": "Jenis Font"
+  }
+}
