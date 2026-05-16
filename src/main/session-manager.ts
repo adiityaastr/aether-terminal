@@ -2,11 +2,14 @@ import { ipcMain, app } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import log from 'electron-log';
+import type { ConnectionType, ConnectionOpts } from '../common/types';
 
 export interface SessionPane {
   type: 'leaf';
   id: string;
   cwd?: string;
+  connectionType?: ConnectionType;
+  connectionOptions?: ConnectionOpts;
 }
 
 export interface SessionSplit {

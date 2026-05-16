@@ -29,6 +29,40 @@ function createTabState(connType?: ConnectionType, connOpts?: ConnectionOpts): T
   return { id: String(nextTabId - 1), title, paneTree: leaf, focusedPaneId: leaf.id };
 }
 
+function paneNodeToSessionNode(node: PaneNode): any {
+  if (node.type === 'leaf') {
+    return {
+      type: 'leaf',
+      id: node.id,
+      connectionType: node.connectionType,
+      connectionOptions: node.connectionOptions,
+    };
+  }
+  return {
+    type: 'split',
+    direction: node.direction,
+    ratio: node.ratio,
+    children: [paneNodeToSessionNode(node.children[0]), paneNodeToSessionNode(node.children[1])],
+  };
+}
+
+function sessionNodeToPaneNode(node: any): PaneNode {
+  if (node.type === 'leaf') {
+    return {
+      type: 'leaf',
+      id: node.id,
+      connectionType: node.connectionType,
+      connectionOptions: node.connectionOptions,
+    } as PaneLeaf;
+  }
+  return {
+    type: 'split',
+    direction: node.direction,
+    ratio: node.ratio,
+    children: [sessionNodeToPaneNode(node.children[0]), sessionNodeToPaneNode(node.children[1])] as [PaneNode, PaneNode],
+  } as PaneSplit;
+}
+
 function getConnectionTitle(type: ConnectionType, opts?: any): string {
   switch (type) {
     case 'ssh': return `ssh: ${opts?.username || ''}@${opts?.host || ''}`;
@@ -118,14 +152,20 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
     window.electronAPI.invoke('session:load').then((session: unknown) => {
-      const s = session as { tabs: TabState[]; activeTabId: string } | null;
+      const s = session as { tabs: any[]; activeTabId: string } | null;
       if (s && s.tabs.length > 0) {
-        setTabs(s.tabs);
+        const restoredTabs: TabState[] = s.tabs.map((t: any) => ({
+          id: t.id,
+          title: t.title,
+          paneTree: sessionNodeToPaneNode(t.paneTree),
+          focusedPaneId: t.focusedPaneId,
+        }));
+        setTabs(restoredTabs);
         setActiveId(s.activeTabId);
-        const maxTabId = getMaxId(s.tabs.map((t) => t.id));
-        const allPaneIds = s.tabs.flatMap((t) => collectPaneIds(t.paneTree));
+        const maxTabId = getMaxId(restoredTabs.map((t) => t.id));
+        const allPaneIds = restoredTabs.flatMap((t) => collectPaneIds(t.paneTree));
         const maxPaneId = getMaxId(allPaneIds);
         nextTabId = maxTabId + 1;
         setPaneIdCounter(maxPaneId);
@@ -235,7 +275,7 @@ export default function App() {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       const session = {
-        tabs: tabs.map((t) => ({ id: t.id, title: t.title, paneTree: t.paneTree, focusedPaneId: t.focusedPaneId })),
+        tabs: tabs.map((t) => ({ id: t.id, title: t.title, paneTree: paneNodeToSessionNode(t.paneTree), focusedPaneId: t.focusedPaneId })),
         activeTabId: activeId,
       };
       window.electronAPI.invoke('session:save', session);
