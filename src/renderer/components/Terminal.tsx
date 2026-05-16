@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
@@ -9,6 +9,7 @@ import i18n from '../i18n';
 import SearchBar from './SearchBar';
 import TerminalContextMenu from './TerminalContextMenu';
 import ConnectionOverlay from './ConnectionOverlay';
+import AutocompleteDropdown from './AutocompleteDropdown';
 import type { ConnectionType, ConnectionOpts, ConnectionState } from '../../common/types';
 import '@xterm/xterm/css/xterm.css';
 
@@ -51,6 +52,19 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
   const { theme } = useTheme();
   const { scrollback, fontSize: configFontSize, updateConfig } = useConfig();
   const [fontSize, setFontSize] = useState(configFontSize);
+  const [autocompleteVisible, setAutocompleteVisible] = useState(false);
+  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<string[]>([]);
+  const [autocompleteIndex, setAutocompleteIndex] = useState(0);
+  const [autocompletePosition, setAutocompletePosition] = useState({ x: 0, y: 0 });
+  const autocompleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sendInputRef = useRef<((data: string) => void) | null>(null);
+  const autocompleteVisibleRef = useRef(false);
+  const autocompleteSuggestionsRef = useRef<string[]>([]);
+  const autocompleteIndexRef = useRef(0);
+
+  autocompleteVisibleRef.current = autocompleteVisible;
+  autocompleteSuggestionsRef.current = autocompleteSuggestions;
+  autocompleteIndexRef.current = autocompleteIndex;
 
   const confirmMultiLinePaste = (text: string): boolean => {
     if (!/\r|\n/.test(text)) return true;
@@ -59,6 +73,35 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
     const suffix = lines.length > 5 ? '\n...' : '';
     return window.confirm(`${i18n.t('pasteWarning')}\n\n${preview}${suffix}\n\n${i18n.t('pasteWarningDetail')}`);
   };
+
+  const triggerAutocomplete = useCallback((term: XTerm) => {
+    if (autocompleteTimerRef.current) clearTimeout(autocompleteTimerRef.current);
+    autocompleteTimerRef.current = setTimeout(() => {
+      const buffer = term.buffer.active;
+      const line = buffer.getLine(buffer.cursorY);
+      if (!line) { setAutocompleteVisible(false); return; }
+      const text = line.translateToString(true, 0, buffer.cursorX);
+      const match = text.match(/(\S+)$/);
+      if (!match || match[1].length < 2) { setAutocompleteVisible(false); return; }
+      window.electronAPI.invoke('autocomplete:suggest', match[1]).then((results: unknown) => {
+        const suggestions = results as string[];
+        if (suggestions.length > 0) {
+          setAutocompleteSuggestions(suggestions);
+          setAutocompleteIndex(0);
+          setAutocompleteVisible(true);
+          const cellWidth = (term.element?.querySelector('.xterm-rows') as HTMLElement)?.offsetWidth || term.cols * 9;
+          const rowHeight = parseInt(getComputedStyle(term.element?.querySelector('.xterm-rows') as HTMLElement).lineHeight) || 20;
+          const colWidth = cellWidth / term.cols;
+          setAutocompletePosition({
+            x: buffer.cursorX * colWidth,
+            y: (buffer.cursorY + 1) * rowHeight + 30,
+          });
+        } else {
+          setAutocompleteVisible(false);
+        }
+      });
+    }, 300);
+  }, []);
 
   useImperativeHandle(ref, () => ({
     zoomIn: () => {
@@ -122,6 +165,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       else if (connectionType === 'serial') window.electronAPI.send('serial:input', id, data);
       else if (connectionType === 'telnet') window.electronAPI.send('telnet:input', id, data);
     };
+    sendInputRef.current = sendInput;
 
     xterm.attachCustomKeyEventHandler((e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'C' && e.type === 'keydown') {
@@ -178,6 +222,45 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
     };
     container.addEventListener('paste', handlePasteEvent, true);
 
+    const handleAutocompleteKeyDown = (e: KeyboardEvent) => {
+      if (!autocompleteVisibleRef.current) return;
+      if (e.key === 'Tab' || e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        const selected = autocompleteSuggestionsRef.current[autocompleteIndexRef.current];
+        if (selected) {
+          const buffer = xterm.buffer.active;
+          const line = buffer.getLine(buffer.cursorY);
+          if (line) {
+            const text = line.translateToString(true, 0, buffer.cursorX);
+            const match = text.match(/(\S+)$/);
+            if (match) {
+              const completion = selected.slice(match[1].length);
+              sendInputRef.current?.(completion + (e.key === 'Enter' ? '\r' : ' '));
+            }
+          }
+        }
+        setAutocompleteVisible(false);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setAutocompleteVisible(false);
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setAutocompleteIndex((i) => Math.min(i + 1, autocompleteSuggestionsRef.current.length - 1));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setAutocompleteIndex((i) => Math.max(i - 1, 0));
+        return;
+      }
+    };
+    container.addEventListener('keydown', handleAutocompleteKeyDown, true);
+
     let id: string | null = null;
 
     const connectLocal = async () => {
@@ -188,7 +271,16 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       onConnectionStateChange?.('connected', id);
 
       window.electronAPI.on(`pty:data:${id}`, (data: unknown) => { xterm.write(data as string); });
-      xterm.onData((data) => { sendInput(data); });
+      xterm.onData((data) => {
+        sendInput(data);
+        if (data === '\r') {
+          const line = xterm.buffer.active.getLine(xterm.buffer.active.cursorY)?.translateToString(true).trim();
+          if (line) window.electronAPI.send('autocomplete:addHistory', line);
+          setAutocompleteVisible(false);
+        } else if (data.length === 1 && data.charCodeAt(0) >= 32) {
+          triggerAutocomplete(xterm);
+        }
+      });
       window.electronAPI.on(`pty:exit:${id}`, () => {
         xterm.write('\r\n\x1b[90m[Process exited]\x1b[0m\r\n');
         if (!mountedRef.current) return;
@@ -206,7 +298,16 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       onConnectionStateChange?.('connected', id);
 
       window.electronAPI.on(`ssh:data:${id}`, (data: unknown) => { xterm.write(data as string); });
-      xterm.onData((data) => { sendInput(data); });
+      xterm.onData((data) => {
+        sendInput(data);
+        if (data === '\r') {
+          const line = xterm.buffer.active.getLine(xterm.buffer.active.cursorY)?.translateToString(true).trim();
+          if (line) window.electronAPI.send('autocomplete:addHistory', line);
+          setAutocompleteVisible(false);
+        } else if (data.length === 1 && data.charCodeAt(0) >= 32) {
+          triggerAutocomplete(xterm);
+        }
+      });
       window.electronAPI.on(`ssh:exit:${id}`, () => {
         xterm.write('\r\n\x1b[90m[SSH session ended]\x1b[0m\r\n');
         if (!mountedRef.current) return;
@@ -230,7 +331,16 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       onConnectionStateChange?.('connected', id);
 
       window.electronAPI.on(`serial:data:${id}`, (data: unknown) => { xterm.write(data as string); });
-      xterm.onData((data) => { sendInput(data); });
+      xterm.onData((data) => {
+        sendInput(data);
+        if (data === '\r') {
+          const line = xterm.buffer.active.getLine(xterm.buffer.active.cursorY)?.translateToString(true).trim();
+          if (line) window.electronAPI.send('autocomplete:addHistory', line);
+          setAutocompleteVisible(false);
+        } else if (data.length === 1 && data.charCodeAt(0) >= 32) {
+          triggerAutocomplete(xterm);
+        }
+      });
       window.electronAPI.on(`serial:exit:${id}`, () => {
         xterm.write('\r\n\x1b[90m[Serial disconnected]\x1b[0m\r\n');
         if (!mountedRef.current) return;
@@ -254,7 +364,16 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       onConnectionStateChange?.('connected', id);
 
       window.electronAPI.on(`telnet:data:${id}`, (data: unknown) => { xterm.write(data as string); });
-      xterm.onData((data) => { sendInput(data); });
+      xterm.onData((data) => {
+        sendInput(data);
+        if (data === '\r') {
+          const line = xterm.buffer.active.getLine(xterm.buffer.active.cursorY)?.translateToString(true).trim();
+          if (line) window.electronAPI.send('autocomplete:addHistory', line);
+          setAutocompleteVisible(false);
+        } else if (data.length === 1 && data.charCodeAt(0) >= 32) {
+          triggerAutocomplete(xterm);
+        }
+      });
       window.electronAPI.on(`telnet:exit:${id}`, () => {
         xterm.write('\r\n\x1b[90m[Telnet session ended]\x1b[0m\r\n');
         if (!mountedRef.current) return;
@@ -300,6 +419,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       window.removeEventListener('terminal:clear', clearHandler);
       container.removeEventListener('contextmenu', handleContextMenu);
       container.removeEventListener('paste', handlePasteEvent, true);
+      container.removeEventListener('keydown', handleAutocompleteKeyDown, true);
       const currentId = sessionIdRef.current;
       if (currentId) {
         if (connectionType === 'local') window.electronAPI.send('pty:kill', currentId);
@@ -318,13 +438,34 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
   }, [fontSize]);
 
   return (
-    <div className="terminal-wrapper">
+    <div className="terminal-wrapper" style={{ position: 'relative' }}>
       <SearchBar
         searchAddon={searchRef.current}
         visible={showSearch}
         onClose={() => setShowSearch(false)}
       />
       <div ref={containerRef} className="terminal-container" />
+      <AutocompleteDropdown
+        suggestions={autocompleteSuggestions}
+        selectedIndex={autocompleteIndex}
+        visible={autocompleteVisible}
+        position={autocompletePosition}
+        onSelect={(suggestion) => {
+          const buffer = xtermRef.current?.buffer.active;
+          if (!buffer) return;
+          const line = buffer.getLine(buffer.cursorY);
+          if (line) {
+            const text = line.translateToString(true, 0, buffer.cursorX);
+            const match = text.match(/(\S+)$/);
+            if (match) {
+              const completion = suggestion.slice(match[1].length);
+              sendInputRef.current?.(completion + ' ');
+            }
+          }
+          setAutocompleteVisible(false);
+        }}
+        onDismiss={() => setAutocompleteVisible(false)}
+      />
       {connectionState !== 'connecting' && connectionState !== 'connected' && (
         <ConnectionOverlay
           connectionType={connectionType}
