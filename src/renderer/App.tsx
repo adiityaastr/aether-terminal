@@ -14,6 +14,7 @@ import { useKeybindingHandler, useKeybindings } from './KeybindingContext';
 import { useTheme } from './ThemeContext';
 import i18n from './i18n';
 import type { ConnectionType, ConnectionOpts, ConnectionState, ToastMessage } from '../common/types';
+import type { PaneNode } from './components/SplitPane';
 
 interface TabState extends Tab {
   paneTree: PaneNode;
@@ -147,6 +148,7 @@ export default function App() {
   const [sftpOpen, setSftpOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [reconnectKeys, setReconnectKeys] = useState<Record<string, number>>({});
+  const [broadcasting, setBroadcasting] = useState(false);
   const { bindings } = useKeybindings();
   const { setThemeId, availableThemes } = useTheme();
 
@@ -158,6 +160,25 @@ export default function App() {
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  useEffect(() => {
+    if (!broadcasting) return;
+    const handler = (e: Event) => {
+      const { sourcePaneId, data } = (e as CustomEvent).detail;
+      const allPaneIds = collectPaneIds(activeTab.paneTree);
+      allPaneIds.forEach((pid) => {
+        if (pid !== sourcePaneId) {
+          window.dispatchEvent(new CustomEvent('terminal:broadcast-recv', { detail: { targetPaneId: pid, data } }));
+        }
+      });
+    };
+    window.addEventListener('terminal:broadcast-send', handler);
+    return () => window.removeEventListener('terminal:broadcast-send', handler);
+  }, [broadcasting, activeTab]);
+
+  const handleToggleBroadcast = useCallback(() => {
+    setBroadcasting((prev) => !prev);
   }, []);
 
 useEffect(() => {
@@ -270,6 +291,7 @@ useEffect(() => {
     'pane:splitV': () => handleSplit(activeTab.focusedPaneId, 'vertical'),
     'pane:close': () => handleClosePane(activeTab.focusedPaneId),
     'palette:open': () => setPaletteOpen(true),
+    'broadcast:toggle': handleToggleBroadcast,
   });
 
   const commands: Command[] = useMemo(() => {
@@ -281,6 +303,7 @@ useEffect(() => {
       { id: 'pane:splitH', label: 'Split Horizontal', category: 'Pane', action: () => handleSplit(activeTab.focusedPaneId, 'horizontal') },
       { id: 'pane:splitV', label: 'Split Vertical', category: 'Pane', action: () => handleSplit(activeTab.focusedPaneId, 'vertical') },
       { id: 'pane:close', label: 'Close Pane', category: 'Pane', action: () => handleClosePane(activeTab.focusedPaneId) },
+      { id: 'broadcast:toggle', label: i18n.t('broadcast.toggle'), category: 'Pane', shortcut: bindings.find((b) => b.id === 'broadcast:toggle')?.key, action: handleToggleBroadcast },
       ...availableThemes.map((t) => ({
         id: `theme:${t.id}`, label: `Theme: ${t.name}`, category: 'Appearance', action: () => setThemeId(t.id),
       })),
@@ -326,6 +349,8 @@ useEffect(() => {
         onSplitH={() => handleSplit(activeTab.focusedPaneId, 'horizontal')}
         onSplitV={() => handleSplit(activeTab.focusedPaneId, 'vertical')}
         onClear={() => window.dispatchEvent(new Event('terminal:clear'))}
+        broadcasting={broadcasting}
+        onToggleBroadcast={handleToggleBroadcast}
       />
       <div className="app-content">
         {tabs.map((tab) => (
@@ -339,6 +364,7 @@ useEffect(() => {
               onConnectionStateChange={handleConnectionStateChange}
               onClosePane={(paneId) => handleClosePane(paneId)}
               reconnectKeys={reconnectKeys}
+              broadcasting={broadcasting}
             />
           </div>
         ))}

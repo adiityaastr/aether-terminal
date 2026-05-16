@@ -22,6 +22,7 @@ const DEFAULT_BINDINGS: Omit<Keybinding, 'key'>[] = [
   { id: 'terminal:zoomIn', label: 'Zoom In', defaultKey: 'Ctrl+=' },
   { id: 'terminal:zoomOut', label: 'Zoom Out', defaultKey: 'Ctrl+-' },
   { id: 'terminal:zoomReset', label: 'Reset Zoom', defaultKey: 'Ctrl+0' },
+  { id: 'broadcast:toggle', label: 'Toggle Broadcast', defaultKey: 'Ctrl+Shift+B' },
 ];
 
 function loadOverrides(): Record<string, string> {

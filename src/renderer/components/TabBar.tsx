@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import i18n from '../i18n';
 
 export interface Tab {
   id: string;
@@ -18,9 +19,11 @@ interface Props {
   onSplitH: () => void;
   onSplitV: () => void;
   onClear: () => void;
+  broadcasting?: boolean;
+  onToggleBroadcast?: () => void;
 }
 
-export default function TabBar({ tabs, activeId, onSelect, onClose, onReorder, onRename, onNew, onNewConnection, onSettings, onSplitH, onSplitV, onClear }: Props) {
+export default function TabBar({ tabs, activeId, onSelect, onClose, onReorder, onRename, onNew, onNewConnection, onSettings, onSplitH, onSplitV, onClear, broadcasting, onToggleBroadcast }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -90,6 +93,7 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onReorder, o
 
       {/* Toolbar buttons */}
       <div className="tab-actions">
+        <button className={`toolbar-btn${broadcasting ? ' broadcasting' : ''}`} onClick={onToggleBroadcast} title={i18n.t(broadcasting ? 'broadcast.on' : 'broadcast.off')}>⊞</button>
         <button className="toolbar-btn" onClick={onNew} title="New Tab (Ctrl+T)">＋</button>
         <button className="toolbar-btn" onClick={onSplitH} title="Split Horizontal (Ctrl+Shift+H)">⫼</button>
         <button className="toolbar-btn" onClick={onSplitV} title="Split Vertical (Ctrl+Shift+V)">⫻</button>

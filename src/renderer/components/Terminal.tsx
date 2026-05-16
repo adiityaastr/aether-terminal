@@ -22,6 +22,7 @@ export interface TerminalHandle {
 }
 
 interface TerminalProps {
+  paneId?: string;
   connectionType?: ConnectionType;
   connectionOptions?: ConnectionOpts;
   onConnectionStateChange?: (state: ConnectionState, sessionId?: string) => void;
@@ -29,9 +30,11 @@ interface TerminalProps {
   onSplitV?: () => void;
   onClosePane?: () => void;
   reconnectKey?: number;
+  broadcasting?: boolean;
 }
 
 const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
+  paneId,
   connectionType = 'local',
   connectionOptions,
   onConnectionStateChange,
@@ -39,6 +42,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
   onSplitV,
   onClosePane,
   reconnectKey = 0,
+  broadcasting = false,
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
@@ -281,6 +285,9 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       window.electronAPI.on(`pty:data:${id}`, (data: unknown) => { xterm.write(data as string); });
       xterm.onData((data) => {
         sendInput(data);
+        if (broadcasting && paneId) {
+          window.dispatchEvent(new CustomEvent('terminal:broadcast-send', { detail: { sourcePaneId: paneId, data } }));
+        }
         if (data === '\r') {
           const line = xterm.buffer.active.getLine(xterm.buffer.active.cursorY)?.translateToString(true).trim();
           if (line) window.electronAPI.send('autocomplete:addHistory', line);
@@ -308,6 +315,9 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       window.electronAPI.on(`ssh:data:${id}`, (data: unknown) => { xterm.write(data as string); });
       xterm.onData((data) => {
         sendInput(data);
+        if (broadcasting && paneId) {
+          window.dispatchEvent(new CustomEvent('terminal:broadcast-send', { detail: { sourcePaneId: paneId, data } }));
+        }
         if (data === '\r') {
           const line = xterm.buffer.active.getLine(xterm.buffer.active.cursorY)?.translateToString(true).trim();
           if (line) window.electronAPI.send('autocomplete:addHistory', line);
@@ -341,6 +351,9 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       window.electronAPI.on(`serial:data:${id}`, (data: unknown) => { xterm.write(data as string); });
       xterm.onData((data) => {
         sendInput(data);
+        if (broadcasting && paneId) {
+          window.dispatchEvent(new CustomEvent('terminal:broadcast-send', { detail: { sourcePaneId: paneId, data } }));
+        }
         if (data === '\r') {
           const line = xterm.buffer.active.getLine(xterm.buffer.active.cursorY)?.translateToString(true).trim();
           if (line) window.electronAPI.send('autocomplete:addHistory', line);
@@ -374,6 +387,9 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       window.electronAPI.on(`telnet:data:${id}`, (data: unknown) => { xterm.write(data as string); });
       xterm.onData((data) => {
         sendInput(data);
+        if (broadcasting && paneId) {
+          window.dispatchEvent(new CustomEvent('terminal:broadcast-send', { detail: { sourcePaneId: paneId, data } }));
+        }
         if (data === '\r') {
           const line = xterm.buffer.active.getLine(xterm.buffer.active.cursorY)?.translateToString(true).trim();
           if (line) window.electronAPI.send('autocomplete:addHistory', line);
@@ -409,6 +425,19 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
     const clearHandler = () => xterm.clear();
     window.addEventListener('terminal:clear', clearHandler);
 
+    const broadcastRecvHandler = (e: Event) => {
+      const { targetPaneId, data } = (e as CustomEvent).detail;
+      if (targetPaneId === paneId && data) {
+        const id = sessionIdRef.current;
+        if (!id) return;
+        if (connectionType === 'local') window.electronAPI.send('pty:input', id, data);
+        else if (connectionType === 'ssh') window.electronAPI.send('ssh:input', id, data);
+        else if (connectionType === 'serial') window.electronAPI.send('serial:input', id, data);
+        else if (connectionType === 'telnet') window.electronAPI.send('telnet:input', id, data);
+      }
+    };
+    window.addEventListener('terminal:broadcast-recv', broadcastRecvHandler);
+
     const onResize = () => {
       fit.fit();
       const currentId = sessionIdRef.current;
@@ -425,6 +454,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       mountedRef.current = false;
       resizeObserver.disconnect();
       window.removeEventListener('terminal:clear', clearHandler);
+      window.removeEventListener('terminal:broadcast-recv', broadcastRecvHandler);
       container.removeEventListener('contextmenu', handleContextMenu);
       container.removeEventListener('paste', handlePasteEvent, true);
       container.removeEventListener('keydown', handleAutocompleteKeyDown, true);
@@ -446,7 +476,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
   }, [fontSize]);
 
   return (
-    <div className="terminal-wrapper" style={{ position: 'relative' }}>
+    <div className={`terminal-wrapper${broadcasting ? ' broadcasting' : ''}`} style={{ position: 'relative' }}>
       <SearchBar
         searchAddon={searchRef.current}
         visible={showSearch}
