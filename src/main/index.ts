@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, globalShortcut, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, globalShortcut, screen, clipboard, dialog } from 'electron';
 import path from 'path';
 import log from 'electron-log';
 import { autoUpdater } from 'electron-updater';
@@ -25,6 +25,16 @@ ipcMain.on('window:maximize', () => {
 ipcMain.on('window:close', () => mainWindow?.close());
 ipcMain.on('open-external', (_e, url: string) => shell.openExternal(url));
 ipcMain.on('log:error', (_e, msg: string) => log.error('[Renderer]', msg));
+ipcMain.handle('clipboard:readText', () => clipboard.readText());
+ipcMain.handle('clipboard:writeText', (_e, text: string) => clipboard.writeText(text));
+ipcMain.handle('dialog:openFile', async () => {
+  const result = await dialog.showOpenDialog({ properties: ['openFile'] });
+  return result.canceled ? null : result.filePaths[0];
+});
+ipcMain.handle('dialog:saveFile', async (_e, filename: string) => {
+  const result = await dialog.showSaveDialog({ defaultPath: filename });
+  return result.canceled ? null : result.filePath;
+});
 
 // Process-level error handlers
 process.on('uncaughtException', (err) => {
