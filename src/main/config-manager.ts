@@ -26,6 +26,7 @@ export interface AppConfig {
   profiles: Profile[];
   restoreSession: boolean;
   scrollback: number;
+  gpuRenderer: boolean;
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -36,6 +37,7 @@ const DEFAULT_CONFIG: AppConfig = {
   profiles: [{ id: 'default', name: 'Default', type: 'local' }],
   restoreSession: true,
   scrollback: 10000,
+  gpuRenderer: true,
 };
 
 const configDir = path.join(app.getPath('userData'));

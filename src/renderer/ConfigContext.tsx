@@ -8,6 +8,7 @@ interface AppConfig {
   profiles: any[];
   restoreSession: boolean;
   scrollback: number;
+  gpuRenderer: boolean;
 }
 
 interface ConfigContextValue {
@@ -16,6 +17,7 @@ interface ConfigContextValue {
   scrollback: number;
   fontSize: number;
   fontFamily: string;
+  gpuRenderer: boolean;
 }
 
 const ConfigContext = createContext<ConfigContextValue>(null!);
@@ -30,6 +32,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
     profiles: [{ id: 'default', name: 'Default', type: 'local' }],
     restoreSession: true,
     scrollback: 10000,
+    gpuRenderer: true,
   });
 
   useEffect(() => {
@@ -51,6 +54,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
       scrollback: config.scrollback ?? 10000,
       fontSize: config.fontSize ?? 14,
       fontFamily: config.fontFamily ?? "'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace",
+      gpuRenderer: config.gpuRenderer ?? true,
     }}>
       {children}
     </ConfigContext.Provider>

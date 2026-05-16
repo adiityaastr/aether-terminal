@@ -3,6 +3,7 @@ import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { WebLinksAddon } from '@xterm/addon-web-links';
+import { WebglAddon } from '@xterm/addon-webgl';
 import { useTheme } from '../ThemeContext';
 import { useConfig } from '../ConfigContext';
 import i18n from '../i18n';
@@ -50,7 +51,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
   const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
   const { theme } = useTheme();
-  const { scrollback, fontSize: configFontSize, updateConfig } = useConfig();
+  const { scrollback, fontSize: configFontSize, updateConfig, gpuRenderer } = useConfig();
   const [fontSize, setFontSize] = useState(configFontSize);
   const [autocompleteVisible, setAutocompleteVisible] = useState(false);
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<string[]>([]);
@@ -151,6 +152,13 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
     xterm.loadAddon(search);
     xterm.loadAddon(webLinks);
     xterm.open(container);
+    if (gpuRenderer !== false) {
+      try {
+        const webglAddon = new WebglAddon();
+        webglAddon.onContextLoss(() => { webglAddon.dispose(); });
+        xterm.loadAddon(webglAddon);
+      } catch {}
+    }
     fit.fit();
 
     xtermRef.current = xterm;

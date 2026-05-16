@@ -13,7 +13,7 @@ interface Props {
 export default function SettingsPanel({ visible, onClose, onOpenProfiles }: Props) {
   const { themeId, setThemeId, availableThemes } = useTheme();
   const { bindings, resetAll } = useKeybindings();
-  const { scrollback, updateConfig } = useConfig();
+  const { scrollback, updateConfig, gpuRenderer } = useConfig();
   const { t, i18n } = useTranslation();
 
   if (!visible) return null;
@@ -57,6 +57,14 @@ export default function SettingsPanel({ visible, onClose, onOpenProfiles }: Prop
               step={1000}
               onChange={(e) => updateConfig({ scrollback: parseInt(e.target.value) })}
               style={{ width: '100%', marginTop: '4px' }}
+            />
+          </div>
+          <div className="setting-group">
+            <label>{t('settings.gpuRenderer')}</label>
+            <input
+              type="checkbox"
+              checked={gpuRenderer !== false}
+              onChange={() => updateConfig({ gpuRenderer: !gpuRenderer })}
             />
           </div>
           <div className="setting-group">
