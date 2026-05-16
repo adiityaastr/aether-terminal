@@ -4,7 +4,7 @@ export default function TitleBar() {
   return (
     <div className="titlebar" role="banner">
       <div className="titlebar-drag">
-        <span className="titlebar-title">TerminalOp</span>
+        <span className="titlebar-title">Aether</span>
       </div>
       <div className="titlebar-controls" role="toolbar" aria-label="Window controls">
         <button className="titlebar-btn" onClick={() => window.electronAPI.send('window:minimize')} aria-label="Minimize">&#x2014;</button>

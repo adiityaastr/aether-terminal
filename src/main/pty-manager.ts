@@ -10,7 +10,19 @@ let idCounter = 0;
 
 // Command history for autocomplete
 const historySet = new Set<string>();
-const historyFile = path.join(os.homedir(), '.terminal_op_history');
+const oldHistoryFile = path.join(os.homedir(), '.terminal_op_history');
+const historyFile = path.join(os.homedir(), '.aether_history');
+
+function migrateHistoryFile() {
+  try {
+    if (fs.existsSync(oldHistoryFile) && !fs.existsSync(historyFile)) {
+      fs.renameSync(oldHistoryFile, historyFile);
+      log.info('Migrated command history from .terminal_op_history to .aether_history');
+    }
+  } catch (e) {
+    log.warn('Failed to migrate history file:', e);
+  }
+}
 
 function loadHistory() {
   try {
@@ -27,6 +39,7 @@ function saveHistory() {
   } catch {}
 }
 
+migrateHistoryFile();
 loadHistory();
 
 function getShell(): string {

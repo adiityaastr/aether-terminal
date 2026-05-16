@@ -42,10 +42,10 @@ function discoverPlugins(): PluginInfo[] {
       if (!fs.existsSync(manifestPath)) continue;
       try {
         const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-        if (manifest.terminalop) {
+        if (manifest.aether) {
           results.push({
             id: dir.name,
-            manifest: manifest.terminalop,
+            manifest: manifest.aether,
             enabled: true,
             path: path.join(pluginsDir, dir.name),
           });

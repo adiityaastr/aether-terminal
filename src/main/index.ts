@@ -12,7 +12,7 @@ import { setupTelnetManager } from './telnet-manager';
 import { setupPluginSystem } from './plugin-host';
 
 log.initialize();
-log.info('TerminalOp starting...');
+log.info('Aether starting...');
 
 let mainWindow: BrowserWindow | null = null;
 let isQuakeVisible = false;

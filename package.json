@@ -1,5 +1,5 @@
 {
-  "name": "terminal-op",
+  "name": "aether",
   "version": "0.1.0",
   "description": "Cross-platform terminal emulator",
   "main": "dist/main/index.js",
@@ -17,8 +17,8 @@
     "dist:linux": "npm run build && electron-builder --linux"
   },
   "build": {
-    "appId": "com.terminalop.app",
-    "productName": "TerminalOp",
+    "appId": "com.aether.app",
+    "productName": "Aether",
     "directories": {
       "output": "out"
     },
@@ -55,7 +55,7 @@
     "publish": {
       "provider": "github",
       "owner": "your-username",
-      "repo": "terminal-op"
+      "repo": "aether"
     }
   },
   "keywords": [
