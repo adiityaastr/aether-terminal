@@ -52,6 +52,14 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
   const { scrollback, fontSize: configFontSize, updateConfig } = useConfig();
   const [fontSize, setFontSize] = useState(configFontSize);
 
+  const confirmMultiLinePaste = (text: string): boolean => {
+    if (!/\r|\n/.test(text)) return true;
+    const lines = text.split(/\r?\n/);
+    const preview = lines.slice(0, 5).join('\n');
+    const suffix = lines.length > 5 ? '\n...' : '';
+    return window.confirm(`${i18n.t('pasteWarning')}\n\n${preview}${suffix}\n\n${i18n.t('pasteWarningDetail')}`);
+  };
+
   useImperativeHandle(ref, () => ({
     zoomIn: () => {
       setFontSize((s) => {
@@ -123,7 +131,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       }
       if (e.ctrlKey && e.shiftKey && e.key === 'V' && e.type === 'keydown') {
         window.electronAPI.invoke('clipboard:readText').then((text: unknown) => {
-          if (typeof text === 'string' && text && id) sendInput(text);
+          if (typeof text === 'string' && text && id && confirmMultiLinePaste(text)) sendInput(text);
         });
         return false;
       }
@@ -158,6 +166,17 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       setShowContextMenu(true);
     };
     container.addEventListener('contextmenu', handleContextMenu);
+
+    const handlePasteEvent = (e: ClipboardEvent) => {
+      const text = e.clipboardData?.getData('text');
+      if (!text) return;
+      if (/\r|\n/.test(text)) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (confirmMultiLinePaste(text)) sendInput(text);
+      }
+    };
+    container.addEventListener('paste', handlePasteEvent, true);
 
     let id: string | null = null;
 
@@ -280,6 +299,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       resizeObserver.disconnect();
       window.removeEventListener('terminal:clear', clearHandler);
       container.removeEventListener('contextmenu', handleContextMenu);
+      container.removeEventListener('paste', handlePasteEvent, true);
       const currentId = sessionIdRef.current;
       if (currentId) {
         if (connectionType === 'local') window.electronAPI.send('pty:kill', currentId);
@@ -328,7 +348,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
           onPaste={() => {
             const id = sessionIdRef.current;
             window.electronAPI.invoke('clipboard:readText').then((text: unknown) => {
-              if (typeof text === 'string' && text && id) {
+              if (typeof text === 'string' && text && id && confirmMultiLinePaste(text)) {
                 if (connectionType === 'local') window.electronAPI.send('pty:input', id, text);
                 else if (connectionType === 'ssh') window.electronAPI.send('ssh:input', id, text);
                 else if (connectionType === 'serial') window.electronAPI.send('serial:input', id, text);
