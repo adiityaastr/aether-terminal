@@ -6,6 +6,7 @@ import CommandPalette, { Command } from './components/CommandPalette';
 import SettingsPanel from './components/SettingsPanel';
 import ConnectionDialog from './components/ConnectionDialog';
 import ProfilesPanel from './components/ProfilesPanel';
+import SFTPPanel from './components/SFTPPanel';
 import NotificationToast from './components/NotificationToast';
 import { useKeybindingHandler, useKeybindings } from './KeybindingContext';
 import { useTheme } from './ThemeContext';
@@ -74,6 +75,13 @@ function getFirstLeafId(node: PaneNode): string {
   return getFirstLeafId(node.children[0]);
 }
 
+function checkRemoteConnection(node: PaneNode): boolean {
+  if (node.type === 'leaf') {
+    return !!node.connectionType && node.connectionType !== 'local';
+  }
+  return checkRemoteConnection(node.children[0]) || checkRemoteConnection(node.children[1]);
+}
+
 export default function App() {
   const [tabs, setTabs] = useState<TabState[]>(() => [createTabState()]);
   const [activeId, setActiveId] = useState<string>('1');
@@ -82,6 +90,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [connDialogOpen, setConnDialogOpen] = useState(false);
   const [profilesOpen, setProfilesOpen] = useState(false);
+  const [sftpOpen, setSftpOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [reconnectKeys, setReconnectKeys] = useState<Record<string, number>>({});
   const { bindings } = useKeybindings();
@@ -118,10 +127,11 @@ export default function App() {
 
   const handleClose = useCallback((id: string) => {
     const tab = tabs.find((t) => t.id === id);
-    if (tab && window.electronAPI) {
-      const hasActiveConnection = tab.paneTree.type === 'leaf';
-      if (!hasActiveConnection || tab.title !== tab.title.startsWith('Terminal') ? tab.title : '') {
-        // Non-local tab — confirm before closing
+    if (tab) {
+      const hasRemoteConnection = checkRemoteConnection(tab.paneTree);
+      if (hasRemoteConnection) {
+        const confirmed = window.confirm('This tab has an active connection. Are you sure you want to close it?');
+        if (!confirmed) return;
       }
     }
     setTabs((prev) => {
