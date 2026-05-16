@@ -83,6 +83,7 @@ export default function App() {
   const [connDialogOpen, setConnDialogOpen] = useState(false);
   const [profilesOpen, setProfilesOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [reconnectKeys, setReconnectKeys] = useState<Record<string, number>>({});
   const { bindings } = useKeybindings();
   const { setThemeId, availableThemes } = useTheme();
 
@@ -116,6 +117,13 @@ export default function App() {
   }, []);
 
   const handleClose = useCallback((id: string) => {
+    const tab = tabs.find((t) => t.id === id);
+    if (tab && window.electronAPI) {
+      const hasActiveConnection = tab.paneTree.type === 'leaf';
+      if (!hasActiveConnection || tab.title !== tab.title.startsWith('Terminal') ? tab.title : '') {
+        // Non-local tab — confirm before closing
+      }
+    }
     setTabs((prev) => {
       const next = prev.filter((t) => t.id !== id);
       if (next.length === 0) return prev;
@@ -243,6 +251,8 @@ export default function App() {
               focusedId={tab.focusedPaneId}
               onFocus={handleFocus}
               onConnectionStateChange={handleConnectionStateChange}
+              onClosePane={(paneId) => handleClosePane(paneId)}
+              reconnectKeys={reconnectKeys}
             />
           </div>
         ))}

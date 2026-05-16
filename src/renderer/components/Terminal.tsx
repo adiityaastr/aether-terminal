@@ -24,6 +24,8 @@ interface TerminalProps {
   onConnectionStateChange?: (state: ConnectionState, sessionId?: string) => void;
   onSplitH?: () => void;
   onSplitV?: () => void;
+  onClosePane?: () => void;
+  reconnectKey?: number;
 }
 
 const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
@@ -32,6 +34,8 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
   onConnectionStateChange,
   onSplitH,
   onSplitV,
+  onClosePane,
+  reconnectKey = 0,
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
@@ -43,22 +47,39 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
-  const [fontSize, setFontSize] = useState(14);
   const { theme } = useTheme();
-  const { scrollback } = useConfig();
-
-  const defaultFontSize = 14;
+  const { scrollback, fontSize: configFontSize, updateConfig } = useConfig();
+  const [fontSize, setFontSize] = useState(configFontSize);
 
   useImperativeHandle(ref, () => ({
-    zoomIn: () => setFontSize((s) => Math.min(s + 1, 72)),
-    zoomOut: () => setFontSize((s) => Math.max(s - 1, 6)),
-    resetZoom: () => setFontSize(defaultFontSize),
+    zoomIn: () => {
+      setFontSize((s) => {
+        const next = Math.min(s + 1, 72);
+        updateConfig({ fontSize: next });
+        return next;
+      });
+    },
+    zoomOut: () => {
+      setFontSize((s) => {
+        const next = Math.max(s - 1, 6);
+        updateConfig({ fontSize: next });
+        return next;
+      });
+    },
+    resetZoom: () => {
+      const def = 14;
+      setFontSize(def);
+      updateConfig({ fontSize: def });
+    },
     clear: () => xtermRef.current?.clear(),
   }));
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+
+    mountedRef.current = true;
+    setConnectionState('connecting');
 
     const xterm = new XTerm({
       cursorBlink: true,
@@ -84,6 +105,15 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
     fitRef.current = fit;
     searchRef.current = search;
 
+    const sendInput = (data: string) => {
+      const id = sessionIdRef.current;
+      if (!id) return;
+      if (connectionType === 'local') window.electronAPI.send('pty:input', id, data);
+      else if (connectionType === 'ssh') window.electronAPI.send('ssh:input', id, data);
+      else if (connectionType === 'serial') window.electronAPI.send('serial:input', id, data);
+      else if (connectionType === 'telnet') window.electronAPI.send('telnet:input', id, data);
+    };
+
     xterm.attachCustomKeyEventHandler((e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'C' && e.type === 'keydown') {
         const sel = xterm.getSelection();
@@ -92,14 +122,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       }
       if (e.ctrlKey && e.shiftKey && e.key === 'V' && e.type === 'keydown') {
         window.electronAPI.invoke('clipboard:readText').then((text: unknown) => {
-          if (typeof text === 'string' && text) {
-            if (connectionType === 'local') {
-              const id = sessionIdRef.current;
-              if (id) window.electronAPI.send('pty:input', id, text);
-            } else {
-              xterm.write(text);
-            }
-          }
+          if (typeof text === 'string' && text && id) sendInput(text);
         });
         return false;
       }
@@ -112,15 +135,17 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
         return false;
       }
       if (e.ctrlKey && e.key === '=' && e.type === 'keydown') {
-        setFontSize((s) => Math.min(s + 1, 72));
+        setFontSize((s) => { const n = Math.min(s + 1, 72); updateConfig({ fontSize: n }); return n; });
         return false;
       }
       if (e.ctrlKey && e.key === '-' && e.type === 'keydown') {
-        setFontSize((s) => Math.max(s - 1, 6));
+        setFontSize((s) => { const n = Math.max(s - 1, 6); updateConfig({ fontSize: n }); return n; });
         return false;
       }
       if (e.ctrlKey && e.key === '0' && e.type === 'keydown') {
-        setFontSize(defaultFontSize);
+        const def = 14;
+        setFontSize(def);
+        updateConfig({ fontSize: def });
         return false;
       }
       return true;
@@ -133,135 +158,116 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
     };
     container.addEventListener('contextmenu', handleContextMenu);
 
-    setConnectionState('connecting');
-    onConnectionStateChange?.('connecting');
+    let id: string | null = null;
 
     const connectLocal = async () => {
-      const id = await window.electronAPI.invoke('pty:spawn', xterm.cols, xterm.rows) as string;
+      id = await window.electronAPI.invoke('pty:spawn', xterm.cols, xterm.rows) as string;
       sessionIdRef.current = id;
+      if (!mountedRef.current) return;
       setConnectionState('connected');
       onConnectionStateChange?.('connected', id);
 
-      window.electronAPI.on(`pty:data:${id}`, (data: unknown) => {
-        xterm.write(data as string);
+      window.electronAPI.on(`pty:data:${id}`, (data: unknown) => { xterm.write(data as string); });
+      xterm.onData((data) => { sendInput(data); });
+      window.electronAPI.on(`pty:exit:${id}`, () => {
+        xterm.write('\r\n\x1b[90m[Process exited]\x1b[0m\r\n');
+        if (!mountedRef.current) return;
+        setConnectionState('disconnected');
+        onConnectionStateChange?.('disconnected', id!);
       });
-
-      xterm.onData((data) => {
-        window.electronAPI.send('pty:input', id, data);
-      });
-
-window.electronAPI.on(`pty:exit:${id}`, () => {
-          xterm.write('\r\n\x1b[90m[Process exited]\x1b[0m\r\n');
-          if (!mountedRef.current) return;
-          setConnectionState('disconnected');
-          onConnectionStateChange?.('disconnected', id);
-        });
     };
 
     const connectSSH = async () => {
       const opts = connectionOptions as import('../../common/types').SSHConnectOpts;
-      try {
-        const id = await window.electronAPI.invoke('ssh:connect', opts) as string;
-        sessionIdRef.current = id;
-        setConnectionState('connected');
-        onConnectionStateChange?.('connected', id);
+      id = await window.electronAPI.invoke('ssh:connect', opts) as string;
+      sessionIdRef.current = id;
+      if (!mountedRef.current) return;
+      setConnectionState('connected');
+      onConnectionStateChange?.('connected', id);
 
-        window.electronAPI.on(`ssh:data:${id}`, (data: unknown) => { xterm.write(data as string); });
-        xterm.onData((data) => { window.electronAPI.send('ssh:input', id, data); });
-        window.electronAPI.on(`ssh:exit:${id}`, () => {
-          xterm.write('\r\n\x1b[90m[SSH session ended]\x1b[0m\r\n');
-          if (!mountedRef.current) return;
-          setConnectionState('disconnected');
-          onConnectionStateChange?.('disconnected', id);
-        });
-        window.electronAPI.on(`ssh:error:${id}`, (errMsg: unknown) => {
-          xterm.write(`\r\n\x1b[31m[Error: ${errMsg}]\x1b[0m\r\n`);
-          if (!mountedRef.current) return;
-          setConnectionState('error');
-          onConnectionStateChange?.('error', id);
-        });
-      } catch (err: unknown) {
+      window.electronAPI.on(`ssh:data:${id}`, (data: unknown) => { xterm.write(data as string); });
+      xterm.onData((data) => { sendInput(data); });
+      window.electronAPI.on(`ssh:exit:${id}`, () => {
+        xterm.write('\r\n\x1b[90m[SSH session ended]\x1b[0m\r\n');
         if (!mountedRef.current) return;
-        xterm.write(`\r\n\x1b[31m[Connection failed: ${err}]\x1b[0m\r\n`);
+        setConnectionState('disconnected');
+        onConnectionStateChange?.('disconnected', id!);
+      });
+      window.electronAPI.on(`ssh:error:${id}`, (errMsg: unknown) => {
+        xterm.write(`\r\n\x1b[31m[Error: ${errMsg}]\x1b[0m\r\n`);
+        if (!mountedRef.current) return;
         setConnectionState('error');
-        onConnectionStateChange?.('error');
-      }
+        onConnectionStateChange?.('error', id!);
+      });
     };
 
     const connectSerial = async () => {
       const opts = connectionOptions as import('../../common/types').SerialConnectOpts;
-      try {
-        const id = await window.electronAPI.invoke('serial:connect', opts) as string;
-        sessionIdRef.current = id;
-        setConnectionState('connected');
-        onConnectionStateChange?.('connected', id);
+      id = await window.electronAPI.invoke('serial:connect', opts) as string;
+      sessionIdRef.current = id;
+      if (!mountedRef.current) return;
+      setConnectionState('connected');
+      onConnectionStateChange?.('connected', id);
 
-        window.electronAPI.on(`serial:data:${id}`, (data: unknown) => { xterm.write(data as string); });
-        xterm.onData((data) => { window.electronAPI.send('serial:input', id, data); });
-        window.electronAPI.on(`serial:exit:${id}`, () => {
-          xterm.write('\r\n\x1b[90m[Serial disconnected]\x1b[0m\r\n');
-          if (!mountedRef.current) return;
-          setConnectionState('disconnected');
-          onConnectionStateChange?.('disconnected', id);
-        });
-        window.electronAPI.on(`serial:error:${id}`, (errMsg: unknown) => {
-          xterm.write(`\r\n\x1b[31m[Error: ${errMsg}]\x1b[0m\r\n`);
-          if (!mountedRef.current) return;
-          setConnectionState('error');
-          onConnectionStateChange?.('error', id);
-        });
-      } catch (err: unknown) {
+      window.electronAPI.on(`serial:data:${id}`, (data: unknown) => { xterm.write(data as string); });
+      xterm.onData((data) => { sendInput(data); });
+      window.electronAPI.on(`serial:exit:${id}`, () => {
+        xterm.write('\r\n\x1b[90m[Serial disconnected]\x1b[0m\r\n');
         if (!mountedRef.current) return;
-        xterm.write(`\r\n\x1b[31m[Connection failed: ${err}]\x1b[0m\r\n`);
+        setConnectionState('disconnected');
+        onConnectionStateChange?.('disconnected', id!);
+      });
+      window.electronAPI.on(`serial:error:${id}`, (errMsg: unknown) => {
+        xterm.write(`\r\n\x1b[31m[Error: ${errMsg}]\x1b[0m\r\n`);
+        if (!mountedRef.current) return;
         setConnectionState('error');
-        onConnectionStateChange?.('error');
-      }
+        onConnectionStateChange?.('error', id!);
+      });
     };
 
     const connectTelnet = async () => {
       const opts = connectionOptions as import('../../common/types').TelnetConnectOpts;
-      try {
-        const id = await window.electronAPI.invoke('telnet:connect', opts) as string;
-        sessionIdRef.current = id;
-        setConnectionState('connected');
-        onConnectionStateChange?.('connected', id);
+      id = await window.electronAPI.invoke('telnet:connect', opts) as string;
+      sessionIdRef.current = id;
+      if (!mountedRef.current) return;
+      setConnectionState('connected');
+      onConnectionStateChange?.('connected', id);
 
-        window.electronAPI.on(`telnet:data:${id}`, (data: unknown) => { xterm.write(data as string); });
-        xterm.onData((data) => { window.electronAPI.send('telnet:input', id, data); });
-        window.electronAPI.on(`telnet:exit:${id}`, () => {
-          xterm.write('\r\n\x1b[90m[Telnet session ended]\x1b[0m\r\n');
-          if (!mountedRef.current) return;
-          setConnectionState('disconnected');
-          onConnectionStateChange?.('disconnected', id);
-        });
-        window.electronAPI.on(`telnet:error:${id}`, (errMsg: unknown) => {
-          xterm.write(`\r\n\x1b[31m[Error: ${errMsg}]\x1b[0m\r\n`);
-          if (!mountedRef.current) return;
-          setConnectionState('error');
-          onConnectionStateChange?.('error', id);
-        });
-      } catch (err: unknown) {
+      window.electronAPI.on(`telnet:data:${id}`, (data: unknown) => { xterm.write(data as string); });
+      xterm.onData((data) => { sendInput(data); });
+      window.electronAPI.on(`telnet:exit:${id}`, () => {
+        xterm.write('\r\n\x1b[90m[Telnet session ended]\x1b[0m\r\n');
         if (!mountedRef.current) return;
-        xterm.write(`\r\n\x1b[31m[Connection failed: ${err}]\x1b[0m\r\n`);
+        setConnectionState('disconnected');
+        onConnectionStateChange?.('disconnected', id!);
+      });
+      window.electronAPI.on(`telnet:error:${id}`, (errMsg: unknown) => {
+        xterm.write(`\r\n\x1b[31m[Error: ${errMsg}]\x1b[0m\r\n`);
+        if (!mountedRef.current) return;
         setConnectionState('error');
-        onConnectionStateChange?.('error');
-      }
+        onConnectionStateChange?.('error', id!);
+      });
     };
 
-    if (connectionType === 'local') connectLocal();
-    else if (connectionType === 'ssh') connectSSH();
-    else if (connectionType === 'serial') connectSerial();
-    else if (connectionType === 'telnet') connectTelnet();
+    const doConnect = () => {
+      if (connectionType === 'local') { connectLocal().catch((err) => { if (!mountedRef.current) return; xterm.write(`\r\n\x1b[31m[Connection failed: ${err}]\x1b[0m\r\n`); setConnectionState('error'); onConnectionStateChange?.('error'); }); }
+      else if (connectionType === 'ssh') { connectSSH().catch((err) => { if (!mountedRef.current) return; xterm.write(`\r\n\x1b[31m[Connection failed: ${err}]\x1b[0m\r\n`); setConnectionState('error'); onConnectionStateChange?.('error'); }); }
+      else if (connectionType === 'serial') { connectSerial().catch((err) => { if (!mountedRef.current) return; xterm.write(`\r\n\x1b[31m[Connection failed: ${err}]\x1b[0m\r\n`); setConnectionState('error'); onConnectionStateChange?.('error'); }); }
+      else if (connectionType === 'telnet') { connectTelnet().catch((err) => { if (!mountedRef.current) return; xterm.write(`\r\n\x1b[31m[Connection failed: ${err}]\x1b[0m\r\n`); setConnectionState('error'); onConnectionStateChange?.('error'); }); }
+    };
+
+    onConnectionStateChange?.('connecting');
+    doConnect();
 
     const clearHandler = () => xterm.clear();
     window.addEventListener('terminal:clear', clearHandler);
 
     const onResize = () => {
       fit.fit();
-      const id = sessionIdRef.current;
-      if (id) {
-        if (connectionType === 'local') window.electronAPI.send('pty:resize', id, xterm.cols, xterm.rows);
-        else if (connectionType === 'ssh') window.electronAPI.send('ssh:resize', id, xterm.cols, xterm.rows);
+      const currentId = sessionIdRef.current;
+      if (currentId) {
+        if (connectionType === 'local') window.electronAPI.send('pty:resize', currentId, xterm.cols, xterm.rows);
+        else if (connectionType === 'ssh') window.electronAPI.send('ssh:resize', currentId, xterm.cols, xterm.rows);
       }
     };
 
@@ -273,16 +279,16 @@ window.electronAPI.on(`pty:exit:${id}`, () => {
       resizeObserver.disconnect();
       window.removeEventListener('terminal:clear', clearHandler);
       container.removeEventListener('contextmenu', handleContextMenu);
-      const id = sessionIdRef.current;
-      if (id) {
-        if (connectionType === 'local') window.electronAPI.send('pty:kill', id);
-        else if (connectionType === 'ssh') window.electronAPI.send('ssh:disconnect', id);
-        else if (connectionType === 'serial') window.electronAPI.send('serial:disconnect', id);
-        else if (connectionType === 'telnet') window.electronAPI.send('telnet:disconnect', id);
+      const currentId = sessionIdRef.current;
+      if (currentId) {
+        if (connectionType === 'local') window.electronAPI.send('pty:kill', currentId);
+        else if (connectionType === 'ssh') window.electronAPI.send('ssh:disconnect', currentId);
+        else if (connectionType === 'serial') window.electronAPI.send('serial:disconnect', currentId);
+        else if (connectionType === 'telnet') window.electronAPI.send('telnet:disconnect', currentId);
       }
       xterm.dispose();
     };
-  }, []);
+  }, [reconnectKey]);
 
   useEffect(() => {
     if (xtermRef.current) {
@@ -306,7 +312,7 @@ window.electronAPI.on(`pty:exit:${id}`, () => {
             setConnectionState('connecting');
             onConnectionStateChange?.('connecting');
           }}
-          onClose={() => {}}
+          onClose={onClosePane}
         />
       )}
       {showContextMenu && (
@@ -319,16 +325,22 @@ window.electronAPI.on(`pty:exit:${id}`, () => {
             if (text) window.electronAPI.invoke('clipboard:writeText', text);
           }}
           onPaste={() => {
+            const id = sessionIdRef.current;
             window.electronAPI.invoke('clipboard:readText').then((text: unknown) => {
-              if (typeof text === 'string' && text) xtermRef.current?.write(text);
+              if (typeof text === 'string' && text && id) {
+                if (connectionType === 'local') window.electronAPI.send('pty:input', id, text);
+                else if (connectionType === 'ssh') window.electronAPI.send('ssh:input', id, text);
+                else if (connectionType === 'serial') window.electronAPI.send('serial:input', id, text);
+                else if (connectionType === 'telnet') window.electronAPI.send('telnet:input', id, text);
+              }
             });
           }}
           onSelectAll={() => xtermRef.current?.selectAll()}
           onClear={() => xtermRef.current?.clear()}
           onSearch={() => setShowSearch(true)}
-          onZoomIn={() => setFontSize((s) => Math.min(s + 1, 72))}
-          onZoomOut={() => setFontSize((s) => Math.max(s - 1, 6))}
-          onResetZoom={() => setFontSize(defaultFontSize)}
+          onZoomIn={() => setFontSize((s) => { const n = Math.min(s + 1, 72); updateConfig({ fontSize: n }); return n; })}
+          onZoomOut={() => setFontSize((s) => { const n = Math.max(s - 1, 6); updateConfig({ fontSize: n }); return n; })}
+          onResetZoom={() => { setFontSize(14); updateConfig({ fontSize: 14 }); }}
           onSplitH={onSplitH}
           onSplitV={onSplitV}
         />

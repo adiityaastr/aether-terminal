@@ -32,9 +32,11 @@ interface SplitPaneProps {
   focusedId: string;
   onFocus: (id: string) => void;
   onConnectionStateChange?: (paneId: string, state: ConnectionState, sessionId?: string) => void;
+  onClosePane?: (paneId: string) => void;
+  reconnectKeys?: Record<string, number>;
 }
 
-export default function SplitPane({ node, onSplit, onClose, focusedId, onFocus, onConnectionStateChange }: SplitPaneProps) {
+export default function SplitPane({ node, onSplit, onClose, focusedId, onFocus, onConnectionStateChange, onClosePane, reconnectKeys }: SplitPaneProps) {
   if (node.type === 'leaf') {
     return (
       <div
@@ -47,6 +49,8 @@ export default function SplitPane({ node, onSplit, onClose, focusedId, onFocus, 
           onConnectionStateChange={(state, sessionId) => onConnectionStateChange?.(node.id, state, sessionId)}
           onSplitH={() => onSplit(node.id, 'horizontal')}
           onSplitV={() => onSplit(node.id, 'vertical')}
+          onClosePane={() => onClosePane?.(node.id)}
+          reconnectKey={reconnectKeys?.[node.id] ?? 0}
         />
       </div>
     );
@@ -56,8 +60,8 @@ export default function SplitPane({ node, onSplit, onClose, focusedId, onFocus, 
     <SplitContainer
       direction={node.direction}
       ratio={node.ratio}
-      left={<SplitPane node={node.children[0]} onSplit={onSplit} onClose={onClose} focusedId={focusedId} onFocus={onFocus} onConnectionStateChange={onConnectionStateChange} />}
-      right={<SplitPane node={node.children[1]} onSplit={onSplit} onClose={onClose} focusedId={focusedId} onFocus={onFocus} onConnectionStateChange={onConnectionStateChange} />}
+      left={<SplitPane node={node.children[0]} onSplit={onSplit} onClose={onClose} focusedId={focusedId} onFocus={onFocus} onConnectionStateChange={onConnectionStateChange} onClosePane={onClosePane} reconnectKeys={reconnectKeys} />}
+      right={<SplitPane node={node.children[1]} onSplit={onSplit} onClose={onClose} focusedId={focusedId} onFocus={onFocus} onConnectionStateChange={onConnectionStateChange} onClosePane={onClosePane} reconnectKeys={reconnectKeys} />}
     />
   );
 }
