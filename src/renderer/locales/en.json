@@ -27,13 +27,33 @@
     "up": "Up",
     "refresh": "Refresh",
     "loading": "Loading...",
-    "delete": "Delete"
+    "delete": "Delete",
+    "upload": "Upload",
+    "download": "Download"
   },
   "settings": {
     "title": "Settings",
     "theme": "Theme",
     "language": "Language",
     "fontSize": "Font Size",
-    "fontFamily": "Font Family"
+    "fontFamily": "Font Family",
+    "scrollback": "Scrollback Lines",
+    "profiles": "Profiles"
+  },
+  "connection": {
+    "disconnected": "Connection lost",
+    "reconnect": "Reconnect",
+    "restart": "Restart",
+    "connecting": "Connecting..."
+  },
+  "contextMenu": {
+    "copy": "Copy",
+    "paste": "Paste",
+    "selectAll": "Select All",
+    "clear": "Clear",
+    "find": "Find",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "resetZoom": "Reset Zoom"
   }
 }

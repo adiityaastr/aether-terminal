@@ -27,13 +27,33 @@
     "up": "Atas",
     "refresh": "Muat Ulang",
     "loading": "Memuat...",
-    "delete": "Hapus"
+    "delete": "Hapus",
+    "upload": "Unggah",
+    "download": "Unduh"
   },
   "settings": {
     "title": "Pengaturan",
     "theme": "Tema",
     "language": "Bahasa",
     "fontSize": "Ukuran Font",
-    "fontFamily": "Jenis Font"
+    "fontFamily": "Jenis Font",
+    "scrollback": "Baris Scrollback",
+    "profiles": "Profil"
+  },
+  "connection": {
+    "disconnected": "Koneksi terputus",
+    "reconnect": "Hubungkan Ulang",
+    "restart": "Mulai Ulang",
+    "connecting": "Menghubungkan..."
+  },
+  "contextMenu": {
+    "copy": "Salin",
+    "paste": "Tempel",
+    "selectAll": "Pilih Semua",
+    "clear": "Bersihkan",
+    "find": "Cari",
+    "zoomIn": "Perbesar",
+    "zoomOut": "Perkecil",
+    "resetZoom": "Reset Zoom"
   }
 }
