@@ -1,11 +1,14 @@
 import React, { useState, useRef, useCallback } from 'react';
 import Terminal from './Terminal';
+import type { ConnectionType, ConnectionOpts, ConnectionState } from '../../common/types';
 
 export type SplitDirection = 'horizontal' | 'vertical';
 
 export interface PaneLeaf {
   type: 'leaf';
   id: string;
+  connectionType?: ConnectionType;
+  connectionOptions?: ConnectionOpts;
 }
 
 export interface PaneSplit {
@@ -28,16 +31,23 @@ interface SplitPaneProps {
   onClose: (id: string) => void;
   focusedId: string;
   onFocus: (id: string) => void;
+  onConnectionStateChange?: (paneId: string, state: ConnectionState, sessionId?: string) => void;
 }
 
-export default function SplitPane({ node, onSplit, onClose, focusedId, onFocus }: SplitPaneProps) {
+export default function SplitPane({ node, onSplit, onClose, focusedId, onFocus, onConnectionStateChange }: SplitPaneProps) {
   if (node.type === 'leaf') {
     return (
       <div
         className={`pane-leaf ${node.id === focusedId ? 'focused' : ''}`}
         onClick={() => onFocus(node.id)}
       >
-        <Terminal />
+        <Terminal
+          connectionType={node.connectionType}
+          connectionOptions={node.connectionOptions}
+          onConnectionStateChange={(state, sessionId) => onConnectionStateChange?.(node.id, state, sessionId)}
+          onSplitH={() => onSplit(node.id, 'horizontal')}
+          onSplitV={() => onSplit(node.id, 'vertical')}
+        />
       </div>
     );
   }
@@ -46,8 +56,8 @@ export default function SplitPane({ node, onSplit, onClose, focusedId, onFocus }
     <SplitContainer
       direction={node.direction}
       ratio={node.ratio}
-      left={<SplitPane node={node.children[0]} onSplit={onSplit} onClose={onClose} focusedId={focusedId} onFocus={onFocus} />}
-      right={<SplitPane node={node.children[1]} onSplit={onSplit} onClose={onClose} focusedId={focusedId} onFocus={onFocus} />}
+      left={<SplitPane node={node.children[0]} onSplit={onSplit} onClose={onClose} focusedId={focusedId} onFocus={onFocus} onConnectionStateChange={onConnectionStateChange} />}
+      right={<SplitPane node={node.children[1]} onSplit={onSplit} onClose={onClose} focusedId={focusedId} onFocus={onFocus} onConnectionStateChange={onConnectionStateChange} />}
     />
   );
 }

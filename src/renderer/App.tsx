@@ -5,8 +5,11 @@ import SplitPane, { PaneNode, PaneLeaf, PaneSplit, SplitDirection, newLeaf } fro
 import CommandPalette, { Command } from './components/CommandPalette';
 import SettingsPanel from './components/SettingsPanel';
 import ConnectionDialog from './components/ConnectionDialog';
+import ProfilesPanel from './components/ProfilesPanel';
+import NotificationToast from './components/NotificationToast';
 import { useKeybindingHandler, useKeybindings } from './KeybindingContext';
 import { useTheme } from './ThemeContext';
+import type { ConnectionType, ConnectionOpts, ConnectionState, ToastMessage } from '../common/types';
 
 interface TabState extends Tab {
   paneTree: PaneNode;
@@ -14,12 +17,26 @@ interface TabState extends Tab {
 }
 
 let nextTabId = 1;
-function createTabState(): TabState {
+function createTabState(connType?: ConnectionType, connOpts?: ConnectionOpts): TabState {
   const leaf = newLeaf();
-  return { id: String(nextTabId++), title: `Terminal ${nextTabId - 1}`, paneTree: leaf, focusedPaneId: leaf.id };
+  if (connType) {
+    (leaf as any).connectionType = connType;
+    (leaf as any).connectionOptions = connOpts;
+  }
+  const title = connType ? getConnectionTitle(connType, connOpts) : `Terminal ${nextTabId}`;
+  nextTabId++;
+  return { id: String(nextTabId - 1), title, paneTree: leaf, focusedPaneId: leaf.id };
 }
 
-// Helper: split a leaf node in the tree
+function getConnectionTitle(type: ConnectionType, opts?: any): string {
+  switch (type) {
+    case 'ssh': return `ssh: ${opts?.username || ''}@${opts?.host || ''}`;
+    case 'serial': return `serial: ${opts?.path || ''} @ ${opts?.baudRate || 9600}`;
+    case 'telnet': return `telnet: ${opts?.host || ''}:${opts?.port || 23}`;
+    default: return 'Terminal';
+  }
+}
+
 function splitNode(tree: PaneNode, targetId: string, direction: SplitDirection): { tree: PaneNode; newId: string } | null {
   if (tree.type === 'leaf') {
     if (tree.id === targetId) {
@@ -29,7 +46,6 @@ function splitNode(tree: PaneNode, targetId: string, direction: SplitDirection):
     }
     return null;
   }
-  // Recurse into children
   const leftResult = splitNode(tree.children[0], targetId, direction);
   if (leftResult) {
     return { tree: { ...tree, children: [leftResult.tree as any, tree.children[1]] }, newId: leftResult.newId };
@@ -41,7 +57,6 @@ function splitNode(tree: PaneNode, targetId: string, direction: SplitDirection):
   return null;
 }
 
-// Helper: remove a leaf and return sibling
 function removeNode(tree: PaneNode, targetId: string): PaneNode | null {
   if (tree.type === 'leaf') return null;
   const [left, right] = tree.children;
@@ -66,10 +81,21 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [connDialogOpen, setConnDialogOpen] = useState(false);
+  const [profilesOpen, setProfilesOpen] = useState(false);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const { bindings } = useKeybindings();
   const { setThemeId, availableThemes } = useTheme();
 
-  // Restore session on mount
+  const addToast = useCallback((type: ToastMessage['type'], message: string) => {
+    const id = String(Date.now());
+    setToasts((prev) => [...prev, { id, type, message }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 5000);
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
   useEffect(() => {
     window.electronAPI.invoke('session:load').then((session: unknown) => {
       const s = session as { tabs: TabState[]; activeTabId: string } | null;
@@ -115,7 +141,7 @@ export default function App() {
   const handleClosePane = useCallback((paneId: string) => {
     setTabs((prev) => prev.map((tab) => {
       if (tab.id !== activeId) return tab;
-      if (tab.paneTree.type === 'leaf') return tab; // don't close last pane
+      if (tab.paneTree.type === 'leaf') return tab;
       const result = removeNode(tab.paneTree, paneId);
       if (!result) return tab;
       return { ...tab, paneTree: result, focusedPaneId: getFirstLeafId(result) };
@@ -129,7 +155,14 @@ export default function App() {
     }));
   }, [activeId]);
 
-  // Keybinding-driven shortcuts
+  const handleConnectionStateChange = useCallback((paneId: string, state: ConnectionState, sessionId?: string) => {
+    if (state === 'error') {
+      addToast('error', 'Connection failed');
+    } else if (state === 'disconnected') {
+      addToast('warning', 'Connection lost');
+    }
+  }, [addToast]);
+
   useKeybindingHandler({
     'tab:new': handleNew,
     'tab:close': () => handleClose(activeId),
@@ -147,7 +180,6 @@ export default function App() {
     'palette:open': () => setPaletteOpen(true),
   });
 
-  // Command palette commands
   const commands: Command[] = useMemo(() => {
     const cmds: Command[] = [
       { id: 'tab:new', label: 'New Tab', category: 'Tab', shortcut: bindings.find((b) => b.id === 'tab:new')?.key, action: handleNew },
@@ -162,7 +194,6 @@ export default function App() {
     return cmds;
   }, [activeId, activeTab, tabs, handleNew, handleClose, handleSplit, handleClosePane, bindings, availableThemes, setThemeId]);
 
-  // Session save (debounced, every 5s after change)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -211,20 +242,34 @@ export default function App() {
               onClose={handleClosePane}
               focusedId={tab.focusedPaneId}
               onFocus={handleFocus}
+              onConnectionStateChange={handleConnectionStateChange}
             />
           </div>
         ))}
       </div>
       <CommandPalette commands={commands} visible={paletteOpen} onClose={() => setPaletteOpen(false)} />
-      <SettingsPanel visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsPanel visible={settingsOpen} onClose={() => setSettingsOpen(false)} onOpenProfiles={() => setProfilesOpen(true)} />
       <ConnectionDialog
         visible={connDialogOpen}
         onClose={() => setConnDialogOpen(false)}
         onConnect={(type, opts) => {
-          console.log('Connect:', type, opts);
-          // TODO: open connection tab with appropriate backend
+          const tab = createTabState(type as ConnectionType, opts);
+          setTabs((prev) => [...prev, tab]);
+          setActiveId(tab.id);
+          setConnDialogOpen(false);
         }}
       />
+      <ProfilesPanel
+        visible={profilesOpen}
+        onClose={() => setProfilesOpen(false)}
+        onConnect={(type, opts) => {
+          const tab = createTabState(type as ConnectionType, opts);
+          setTabs((prev) => [...prev, tab]);
+          setActiveId(tab.id);
+          setProfilesOpen(false);
+        }}
+      />
+      <NotificationToast toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

@@ -1,16 +1,19 @@
 import React from 'react';
 import { useTheme } from '../ThemeContext';
 import { useKeybindings } from '../KeybindingContext';
+import { useConfig } from '../ConfigContext';
 import { useTranslation } from 'react-i18next';
 
 interface Props {
   visible: boolean;
   onClose: () => void;
+  onOpenProfiles: () => void;
 }
 
-export default function SettingsPanel({ visible, onClose }: Props) {
+export default function SettingsPanel({ visible, onClose, onOpenProfiles }: Props) {
   const { themeId, setThemeId, availableThemes } = useTheme();
   const { bindings, resetAll } = useKeybindings();
+  const { scrollback, updateConfig } = useConfig();
   const { t, i18n } = useTranslation();
 
   if (!visible) return null;
@@ -35,6 +38,30 @@ export default function SettingsPanel({ visible, onClose }: Props) {
               <option value="en">English</option>
               <option value="id">Bahasa Indonesia</option>
             </select>
+          </div>
+          <div className="setting-group">
+            <label>{t('settings.scrollback')}</label>
+            <input
+              type="number"
+              value={scrollback}
+              min={1000}
+              max={100000}
+              step={1000}
+              onChange={(e) => updateConfig({ scrollback: parseInt(e.target.value) || 10000 })}
+            />
+            <input
+              type="range"
+              value={scrollback}
+              min={1000}
+              max={100000}
+              step={1000}
+              onChange={(e) => updateConfig({ scrollback: parseInt(e.target.value) })}
+              style={{ width: '100%', marginTop: '4px' }}
+            />
+          </div>
+          <div className="setting-group">
+            <label>{t('settings.profiles')}</label>
+            <button className="btn-secondary" onClick={() => { onOpenProfiles(); onClose(); }}>Manage Profiles</button>
           </div>
           <div className="setting-group">
             <label>Keybindings</label>
