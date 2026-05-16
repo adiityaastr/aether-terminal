@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import TitleBar from './components/TitleBar';
 import TabBar, { Tab } from './components/TabBar';
-import SplitPane, { PaneNode, PaneLeaf, PaneSplit, SplitDirection, newLeaf } from './components/SplitPane';
+import SplitPane, { PaneNode, PaneLeaf, PaneSplit, SplitDirection, newLeaf, setPaneIdCounter } from './components/SplitPane';
 import CommandPalette, { Command } from './components/CommandPalette';
 import SettingsPanel from './components/SettingsPanel';
 import ConnectionDialog from './components/ConnectionDialog';
@@ -82,6 +82,18 @@ function checkRemoteConnection(node: PaneNode): boolean {
   return checkRemoteConnection(node.children[0]) || checkRemoteConnection(node.children[1]);
 }
 
+function collectPaneIds(node: PaneNode): string[] {
+  if (node.type === 'leaf') return [node.id];
+  return [...collectPaneIds(node.children[0]), ...collectPaneIds(node.children[1])];
+}
+
+function getMaxId(ids: string[]): number {
+  return ids.reduce((max, id) => {
+    const num = parseInt(id, 10);
+    return isNaN(num) ? max : Math.max(max, num);
+  }, 0);
+}
+
 export default function App() {
   const [tabs, setTabs] = useState<TabState[]>(() => [createTabState()]);
   const [activeId, setActiveId] = useState<string>('1');
@@ -112,6 +124,11 @@ export default function App() {
       if (s && s.tabs.length > 0) {
         setTabs(s.tabs);
         setActiveId(s.activeTabId);
+        const maxTabId = getMaxId(s.tabs.map((t) => t.id));
+        const allPaneIds = s.tabs.flatMap((t) => collectPaneIds(t.paneTree));
+        const maxPaneId = getMaxId(allPaneIds);
+        nextTabId = maxTabId + 1;
+        setPaneIdCounter(maxPaneId);
       }
       setLoaded(true);
     });

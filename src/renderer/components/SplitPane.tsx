@@ -24,6 +24,9 @@ let paneIdCounter = 0;
 export function newLeaf(): PaneLeaf {
   return { type: 'leaf', id: String(++paneIdCounter) };
 }
+export function setPaneIdCounter(value: number): void {
+  paneIdCounter = value;
+}
 
 interface SplitPaneProps {
   node: PaneNode;
