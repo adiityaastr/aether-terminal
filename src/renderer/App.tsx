@@ -202,6 +202,7 @@ export default function App() {
     const cmds: Command[] = [
       { id: 'tab:new', label: 'New Tab', category: 'Tab', shortcut: bindings.find((b) => b.id === 'tab:new')?.key, action: handleNew },
       { id: 'tab:close', label: 'Close Tab', category: 'Tab', action: () => handleClose(activeId) },
+      { id: 'sftp:open', label: 'Open SFTP Browser', category: 'SFTP', action: () => setSftpOpen(true) },
       { id: 'pane:splitH', label: 'Split Horizontal', category: 'Pane', action: () => handleSplit(activeTab.focusedPaneId, 'horizontal') },
       { id: 'pane:splitV', label: 'Split Vertical', category: 'Pane', action: () => handleSplit(activeTab.focusedPaneId, 'vertical') },
       { id: 'pane:close', label: 'Close Pane', category: 'Pane', action: () => handleClosePane(activeTab.focusedPaneId) },
@@ -289,6 +290,7 @@ export default function App() {
           setProfilesOpen(false);
         }}
       />
+      <SFTPPanel visible={sftpOpen} onClose={() => setSftpOpen(false)} />
       <NotificationToast toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
