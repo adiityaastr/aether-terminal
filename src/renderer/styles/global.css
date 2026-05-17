@@ -496,3 +496,30 @@ body {
   opacity: 0.4;
   padding: 20px;
 }
+
+/* Settings Sections */
+.settings-section { margin-bottom: 20px; }
+.settings-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.4; margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+.settings-section .setting-group { margin-bottom: 12px; }
+
+/* Keybinding editing */
+.keybinding-edit-btn {
+  background: transparent; border: 1px solid var(--border); color: var(--text);
+  padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 10px;
+}
+.keybinding-edit-btn:hover { background: rgba(255,255,255,0.06); }
+.keybinding-recording kbd { animation: keybinding-flash 0.8s infinite; }
+@keyframes keybinding-flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* Tab badges */
+.tab-badge {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  margin-right: 6px; flex-shrink: 0;
+}
+.tab-badge-error { background: var(--red); }
+.tab-badge-disconnected { background: #888; }
+.tab-badge-connecting { background: var(--accent); animation: keybinding-flash 1s infinite; }
+
+/* Bell flash */
+.terminal-bell-flash { animation: bell-flash 0.3s ease-out; }
+@keyframes bell-flash { 0% { filter: brightness(1.8); } 100% { filter: brightness(1); } }
