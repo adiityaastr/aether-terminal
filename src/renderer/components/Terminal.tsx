@@ -142,21 +142,28 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
     const container = containerRef.current;
     if (!container) return;
 
-    // If container is hidden (display: none from inactive tab), defer init until visible
+    // If container is hidden (zero dimensions), retry after a frame
     if (container.offsetWidth === 0 || container.offsetHeight === 0) {
       let cancelled = false;
-      const observer = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting && !cancelled) {
-          observer.disconnect();
-          initTerminalInContainer(container);
+      const check = () => {
+        if (cancelled) return;
+        if (container.offsetWidth > 0 && container.offsetHeight > 0) {
+          const cleanup = initTerminalInContainer(container);
+          cleanupRef.current = cleanup;
+        } else {
+          requestAnimationFrame(check);
         }
-      }, { threshold: 0 });
-      observer.observe(container);
-      return () => { cancelled = true; observer.disconnect(); };
+      };
+      requestAnimationFrame(check);
+      return () => { cancelled = true; cleanupRef.current?.(); };
     }
 
-    return initTerminalInContainer(container);
+    const cleanup = initTerminalInContainer(container);
+    cleanupRef.current = cleanup;
+    return () => { cleanupRef.current?.(); };
   }, [reconnectKey]);
+
+  const cleanupRef = useRef<(() => void) | null>(null);
 
   function initTerminalInContainer(container: HTMLDivElement): () => void {
     mountedRef.current = true;

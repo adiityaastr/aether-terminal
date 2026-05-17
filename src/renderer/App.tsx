@@ -367,18 +367,20 @@ useEffect(() => {
       <div className="app-content">
         {tabs.map((tab) => (
           <div key={tab.id} className="tab-panel" style={{ display: tab.id === activeId ? 'flex' : 'none' }}>
-            <SplitPane
-              node={tab.paneTree}
-              onSplit={handleSplit}
-              onClose={handleClosePane}
-              focusedId={tab.focusedPaneId}
-              onFocus={handleFocus}
-              onConnectionStateChange={handleConnectionStateChange}
-              onClosePane={(paneId) => handleClosePane(paneId)}
-              reconnectKeys={reconnectKeys}
-              broadcasting={broadcasting}
-              onCwdChange={handleCwdChange}
-            />
+            {tab.id === activeId && (
+              <SplitPane
+                node={tab.paneTree}
+                onSplit={handleSplit}
+                onClose={handleClosePane}
+                focusedId={tab.focusedPaneId}
+                onFocus={handleFocus}
+                onConnectionStateChange={handleConnectionStateChange}
+                onClosePane={(paneId) => handleClosePane(paneId)}
+                reconnectKeys={reconnectKeys}
+                broadcasting={broadcasting}
+                onCwdChange={handleCwdChange}
+              />
+            )}
           </div>
         ))}
       </div>
