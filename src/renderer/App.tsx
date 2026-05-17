@@ -151,6 +151,8 @@ export default function App() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [reconnectKeys, setReconnectKeys] = useState<Record<string, number>>({});
   const [broadcasting, setBroadcasting] = useState(false);
+  const [paneCwds, setPaneCwds] = useState<Record<string, string>>({});
+  const [tabConnectionStates, setTabConnectionStates] = useState<Record<string, ConnectionState>>({});
   const { bindings } = useKeybindings();
   const { setThemeId, availableThemes } = useTheme();
 
@@ -276,7 +278,12 @@ useEffect(() => {
     } else if (state === 'disconnected') {
       addToast('warning', 'Connection lost');
     }
+    setTabConnectionStates((prev) => ({ ...prev, [paneId]: state }));
   }, [addToast]);
+
+  const handleCwdChange = useCallback((paneId: string, cwd: string) => {
+    setPaneCwds((prev) => ({ ...prev, [paneId]: cwd }));
+  }, []);
 
   useKeybindingHandler({
     'tab:new': handleNew,
@@ -306,6 +313,7 @@ useEffect(() => {
       { id: 'pane:splitH', label: 'Split Horizontal', category: 'Pane', action: () => handleSplit(activeTab.focusedPaneId, 'horizontal') },
       { id: 'pane:splitV', label: 'Split Vertical', category: 'Pane', action: () => handleSplit(activeTab.focusedPaneId, 'vertical') },
       { id: 'pane:close', label: 'Close Pane', category: 'Pane', action: () => handleClosePane(activeTab.focusedPaneId) },
+      { id: 'buffer:export', label: 'Export Buffer to File', category: 'Terminal', shortcut: 'Ctrl+Shift+S', action: () => window.dispatchEvent(new Event('terminal:exportBuffer')) },
       { id: 'broadcast:toggle', label: i18n.t('broadcast.toggle'), category: 'Pane', shortcut: bindings.find((b) => b.id === 'broadcast:toggle')?.key, action: handleToggleBroadcast },
       ...availableThemes.map((t) => ({
         id: `theme:${t.id}`, label: `Theme: ${t.name}`, category: 'Appearance', action: () => setThemeId(t.id),
@@ -354,6 +362,7 @@ useEffect(() => {
         onClear={() => window.dispatchEvent(new Event('terminal:clear'))}
         broadcasting={broadcasting}
         onToggleBroadcast={handleToggleBroadcast}
+        connectionStates={tabConnectionStates}
       />
       <div className="app-content">
         {tabs.map((tab) => (
@@ -368,6 +377,7 @@ useEffect(() => {
               onClosePane={(paneId) => handleClosePane(paneId)}
               reconnectKeys={reconnectKeys}
               broadcasting={broadcasting}
+              onCwdChange={handleCwdChange}
             />
           </div>
         ))}
@@ -398,7 +408,7 @@ useEffect(() => {
       <CommandHistoryPanel visible={historyOpen} onClose={() => setHistoryOpen(false)} />
       <NotificationToast toasts={toasts} onDismiss={dismissToast} />
       <UpdateNotification />
-      <StatusBar connectionInfo={connectionInfo} />
+      <StatusBar connectionInfo={connectionInfo} cwd={paneCwds[activeTab.focusedPaneId]} />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import i18n from '../i18n';
+import type { ConnectionState } from '../../common/types';
 
 export interface Tab {
   id: string;
@@ -21,9 +22,10 @@ interface Props {
   onClear: () => void;
   broadcasting?: boolean;
   onToggleBroadcast?: () => void;
+  connectionStates?: Record<string, ConnectionState>;
 }
 
-export default function TabBar({ tabs, activeId, onSelect, onClose, onReorder, onRename, onNew, onNewConnection, onSettings, onSplitH, onSplitV, onClear, broadcasting, onToggleBroadcast }: Props) {
+export default function TabBar({ tabs, activeId, onSelect, onClose, onReorder, onRename, onNew, onNewConnection, onSettings, onSplitH, onSplitV, onClear, broadcasting, onToggleBroadcast, connectionStates }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -84,7 +86,12 @@ export default function TabBar({ tabs, activeId, onSelect, onClose, onReorder, o
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span className="tab-title">{tab.title}</span>
+              <>
+                {connectionStates && connectionStates[tab.id] === 'error' && <span className="tab-badge tab-badge-error" />}
+                {connectionStates && connectionStates[tab.id] === 'disconnected' && <span className="tab-badge tab-badge-disconnected" />}
+                {connectionStates && connectionStates[tab.id] === 'connecting' && <span className="tab-badge tab-badge-connecting" />}
+                <span className="tab-title">{tab.title}</span>
+              </>
             )}
             <button className="tab-close" onClick={(e) => { e.stopPropagation(); onClose(tab.id); }}>×</button>
           </div>

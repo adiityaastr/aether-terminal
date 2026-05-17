@@ -38,9 +38,10 @@ interface SplitPaneProps {
   onClosePane?: (paneId: string) => void;
   reconnectKeys?: Record<string, number>;
   broadcasting?: boolean;
+  onCwdChange?: (paneId: string, cwd: string) => void;
 }
 
-export default function SplitPane({ node, onSplit, onClose, focusedId, onFocus, onConnectionStateChange, onClosePane, reconnectKeys, broadcasting }: SplitPaneProps) {
+export default function SplitPane({ node, onSplit, onClose, focusedId, onFocus, onConnectionStateChange, onClosePane, reconnectKeys, broadcasting, onCwdChange }: SplitPaneProps) {
   if (node.type === 'leaf') {
     return (
       <div
@@ -57,6 +58,7 @@ export default function SplitPane({ node, onSplit, onClose, focusedId, onFocus, 
           onClosePane={() => onClosePane?.(node.id)}
           reconnectKey={reconnectKeys?.[node.id] ?? 0}
           broadcasting={broadcasting}
+          onCwdChange={(cwd) => onCwdChange?.(node.id, cwd)}
         />
       </div>
     );
@@ -66,8 +68,8 @@ export default function SplitPane({ node, onSplit, onClose, focusedId, onFocus, 
     <SplitContainer
       direction={node.direction}
       ratio={node.ratio}
-      left={<SplitPane node={node.children[0]} onSplit={onSplit} onClose={onClose} focusedId={focusedId} onFocus={onFocus} onConnectionStateChange={onConnectionStateChange} onClosePane={onClosePane} reconnectKeys={reconnectKeys} broadcasting={broadcasting} />}
-      right={<SplitPane node={node.children[1]} onSplit={onSplit} onClose={onClose} focusedId={focusedId} onFocus={onFocus} onConnectionStateChange={onConnectionStateChange} onClosePane={onClosePane} reconnectKeys={reconnectKeys} broadcasting={broadcasting} />}
+      left={<SplitPane node={node.children[0]} onSplit={onSplit} onClose={onClose} focusedId={focusedId} onFocus={onFocus} onConnectionStateChange={onConnectionStateChange} onClosePane={onClosePane} reconnectKeys={reconnectKeys} broadcasting={broadcasting} onCwdChange={onCwdChange} />}
+      right={<SplitPane node={node.children[1]} onSplit={onSplit} onClose={onClose} focusedId={focusedId} onFocus={onFocus} onConnectionStateChange={onConnectionStateChange} onClosePane={onClosePane} reconnectKeys={reconnectKeys} broadcasting={broadcasting} onCwdChange={onCwdChange} />}
     />
   );
 }
