@@ -27,6 +27,28 @@ ipcMain.on('open-external', (_e, url: string) => shell.openExternal(url));
 ipcMain.on('log:error', (_e, msg: string) => log.error('[Renderer]', msg));
 ipcMain.handle('clipboard:readText', () => clipboard.readText());
 ipcMain.handle('clipboard:writeText', (_e, text: string) => clipboard.writeText(text));
+ipcMain.handle('bell:play', () => {
+  if (process.platform === 'win32') {
+    require('child_process').exec('rundll32 user32.dll,MessageBeep');
+  } else {
+    process.stdout.write('\x07');
+  }
+});
+ipcMain.handle('buffer:export', async (_e, content: string, defaultName: string) => {
+  const { filePath } = await dialog.showSaveDialog({
+    defaultPath: defaultName,
+    filters: [{ name: 'Text Files', extensions: ['txt', 'log'] }],
+  });
+  if (filePath) {
+    const fs = require('fs');
+    fs.writeFileSync(filePath, content, 'utf-8');
+    return filePath;
+  }
+  return null;
+});
+ipcMain.handle('pty:cwd', async (_e, _id: string) => {
+  return '';
+});
 ipcMain.handle('dialog:openFile', async () => {
   const result = await dialog.showOpenDialog({ properties: ['openFile'] });
   return result.canceled ? null : result.filePaths[0];

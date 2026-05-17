@@ -31,6 +31,7 @@ interface TerminalProps {
   onClosePane?: () => void;
   reconnectKey?: number;
   broadcasting?: boolean;
+  onCwdChange?: (cwd: string) => void;
 }
 
 const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
@@ -43,6 +44,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
   onClosePane,
   reconnectKey = 0,
   broadcasting = false,
+  onCwdChange,
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
@@ -55,7 +57,12 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
   const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
   const { theme } = useTheme();
-  const { scrollback, fontSize: configFontSize, updateConfig, gpuRenderer } = useConfig();
+  const {
+    scrollback, fontSize: configFontSize, updateConfig, gpuRenderer,
+    cursorStyle, cursorBlink, copyOnSelect, rightClickBehavior,
+    wordSeparator, fontLigatures, lineHeight, letterSpacing,
+    terminalPadding, bellStyle,
+  } = useConfig();
   const [fontSize, setFontSize] = useState(configFontSize);
   const [autocompleteVisible, setAutocompleteVisible] = useState(false);
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<string[]>([]);
@@ -139,11 +146,15 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
     setConnectionState('connecting');
 
     const xterm = new XTerm({
-      cursorBlink: true,
+      cursorBlink: cursorBlink ?? true,
+      cursorStyle: cursorStyle ?? 'block',
       fontSize,
       fontFamily: theme.font?.family || "'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace",
       scrollback: scrollback ?? 10000,
       theme: theme.terminal,
+      lineHeight: lineHeight ?? 1.0,
+      letterSpacing: letterSpacing ?? 0,
+      wordSeparator: wordSeparator ?? " ()[]{}'\"，:;~!@#$%^&*|+=?<>",
     });
 
     const fit = new FitAddon();
@@ -178,6 +189,26 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       else if (connectionType === 'telnet') window.electronAPI.send('telnet:input', id, data);
     };
     sendInputRef.current = sendInput;
+
+    let hasSelection = false;
+    xterm.onSelectionChange(() => {
+      const selection = xterm.getSelection();
+      if (selection && selection.length > 0 && !hasSelection && copyOnSelect) {
+        window.electronAPI.invoke('clipboard:writeText', selection);
+      }
+      hasSelection = !!selection && selection.length > 0;
+    });
+
+    xterm.onBell(() => {
+      if (bellStyle === 'none') return;
+      if (bellStyle === 'visual' || bellStyle === 'both') {
+        container.classList.add('terminal-bell-flash');
+        setTimeout(() => container.classList.remove('terminal-bell-flash'), 300);
+      }
+      if (bellStyle === 'audible' || bellStyle === 'both') {
+        window.electronAPI.invoke('bell:play');
+      }
+    });
 
     xterm.attachCustomKeyEventHandler((e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'C' && e.type === 'keydown') {
@@ -218,6 +249,14 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
 
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
+      if (rightClickBehavior === 'paste') {
+        window.electronAPI.invoke('clipboard:readText').then((text: unknown) => {
+          if (typeof text === 'string' && text && confirmMultiLinePaste(text)) {
+            sendInputRef.current?.(text);
+          }
+        });
+        return;
+      }
       setContextMenuPos({ x: e.clientX, y: e.clientY });
       setShowContextMenu(true);
     };
@@ -233,6 +272,29 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       }
     };
     container.addEventListener('paste', handlePasteEvent, true);
+
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const files = e.dataTransfer?.files;
+      if (!files || files.length === 0) return;
+      const paths: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const filePath = (files[i] as any).path as string | undefined;
+        if (filePath) {
+          paths.push(filePath.includes(' ') ? `"${filePath}"` : filePath);
+        }
+      }
+      if (paths.length > 0) {
+        sendInputRef.current?.(paths.join(' ') + '\r');
+      }
+    };
+    container.addEventListener('dragover', handleDragOver);
+    container.addEventListener('drop', handleDrop);
 
     const handleAutocompleteKeyDown = (e: KeyboardEvent) => {
       if (!autocompleteVisibleRef.current) return;
@@ -275,6 +337,22 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
 
     let id: string | null = null;
 
+    const processData = (raw: string): string => {
+      const osc7Match = raw.match(/\x1b\]7;([^\x07\x1b]*)\x1b\\/);
+      if (osc7Match) {
+        try {
+          const url = osc7Match[1];
+          const parsed = new URL(url);
+          const path = decodeURIComponent(parsed.pathname);
+          if (path) {
+            onCwdChange?.(path);
+          }
+        } catch {}
+        raw = raw.replace(/\x1b\]7;[^\x07\x1b]*\x1b\\/g, '');
+      }
+      return raw;
+    };
+
     const connectLocal = async () => {
       id = await window.electronAPI.invoke('pty:spawn', xterm.cols, xterm.rows, (connectionOptions as import('../../common/types').LocalConnectOpts)?.shell) as string;
       sessionIdRef.current = id;
@@ -282,7 +360,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       setConnectionState('connected');
       onConnectionStateChange?.('connected', id);
 
-      window.electronAPI.on(`pty:data:${id}`, (data: unknown) => { xterm.write(data as string); });
+      window.electronAPI.on(`pty:data:${id}`, (data: unknown) => { xterm.write(processData(data as string)); });
       xterm.onData((data) => {
         sendInput(data);
         if (broadcasting && paneId) {
@@ -312,7 +390,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       setConnectionState('connected');
       onConnectionStateChange?.('connected', id);
 
-      window.electronAPI.on(`ssh:data:${id}`, (data: unknown) => { xterm.write(data as string); });
+      window.electronAPI.on(`ssh:data:${id}`, (data: unknown) => { xterm.write(processData(data as string)); });
       xterm.onData((data) => {
         sendInput(data);
         if (broadcasting && paneId) {
@@ -348,7 +426,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       setConnectionState('connected');
       onConnectionStateChange?.('connected', id);
 
-      window.electronAPI.on(`serial:data:${id}`, (data: unknown) => { xterm.write(data as string); });
+      window.electronAPI.on(`serial:data:${id}`, (data: unknown) => { xterm.write(processData(data as string)); });
       xterm.onData((data) => {
         sendInput(data);
         if (broadcasting && paneId) {
@@ -384,7 +462,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       setConnectionState('connected');
       onConnectionStateChange?.('connected', id);
 
-      window.electronAPI.on(`telnet:data:${id}`, (data: unknown) => { xterm.write(data as string); });
+      window.electronAPI.on(`telnet:data:${id}`, (data: unknown) => { xterm.write(processData(data as string)); });
       xterm.onData((data) => {
         sendInput(data);
         if (broadcasting && paneId) {
@@ -438,6 +516,20 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
     };
     window.addEventListener('terminal:broadcast-recv', broadcastRecvHandler);
 
+    const exportBufferHandler = () => {
+      const xtermInst = xtermRef.current;
+      if (!xtermInst) return;
+      const buffer = xtermInst.buffer.active;
+      const lines: string[] = [];
+      for (let i = 0; i < buffer.length; i++) {
+        const line = buffer.getLine(i);
+        if (line) lines.push(line.translateToString(true));
+      }
+      const content = lines.join('\n');
+      window.electronAPI.invoke('buffer:export', content, `terminal-export-${Date.now()}.txt`);
+    };
+    window.addEventListener('terminal:exportBuffer', exportBufferHandler);
+
     const onResize = () => {
       fit.fit();
       const currentId = sessionIdRef.current;
@@ -455,9 +547,12 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       resizeObserver.disconnect();
       window.removeEventListener('terminal:clear', clearHandler);
       window.removeEventListener('terminal:broadcast-recv', broadcastRecvHandler);
+      window.removeEventListener('terminal:exportBuffer', exportBufferHandler);
       container.removeEventListener('contextmenu', handleContextMenu);
       container.removeEventListener('paste', handlePasteEvent, true);
       container.removeEventListener('keydown', handleAutocompleteKeyDown, true);
+      container.removeEventListener('dragover', handleDragOver);
+      container.removeEventListener('drop', handleDrop);
       const currentId = sessionIdRef.current;
       if (currentId) {
         if (connectionType === 'local') window.electronAPI.send('pty:kill', currentId);
@@ -475,6 +570,15 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
     }
   }, [fontSize]);
 
+  useEffect(() => {
+    const xterm = xtermRef.current;
+    if (!xterm) return;
+    xterm.options.cursorStyle = cursorStyle ?? 'block';
+    xterm.options.cursorBlink = cursorBlink ?? true;
+    xterm.options.lineHeight = lineHeight ?? 1.0;
+    xterm.options.letterSpacing = letterSpacing ?? 0;
+  }, [cursorStyle, cursorBlink, lineHeight, letterSpacing]);
+
   return (
     <div className={`terminal-wrapper${broadcasting ? ' broadcasting' : ''}`} style={{ position: 'relative' }}>
       <SearchBar
@@ -482,7 +586,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
         visible={showSearch}
         onClose={() => setShowSearch(false)}
       />
-      <div ref={containerRef} className="terminal-container" />
+      <div ref={containerRef} className="terminal-container" style={{ padding: `${terminalPadding ?? 4}px` }} />
       <AutocompleteDropdown
         suggestions={autocompleteSuggestions}
         selectedIndex={autocompleteIndex}
@@ -512,7 +616,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
             setConnectionState('connecting');
             onConnectionStateChange?.('connecting');
           }}
-          onClose={onClosePane}
+          onClose={onClosePane ?? (() => {})}
         />
       )}
       {showContextMenu && (
