@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import TitleBar from './components/TitleBar';
 import TabBar, { Tab } from './components/TabBar';
-import SplitPane, { PaneNode, PaneLeaf, PaneSplit, SplitDirection, newLeaf, setPaneIdCounter } from './components/SplitPane';
+import type { PaneNode, PaneLeaf, PaneSplit, SplitDirection } from './components/SplitPane';
+import SplitPane, { newLeaf, setPaneIdCounter } from './components/SplitPane';
 import CommandPalette, { Command } from './components/CommandPalette';
 import SettingsPanel from './components/SettingsPanel';
 import ConnectionDialog from './components/ConnectionDialog';
@@ -15,7 +16,6 @@ import { useKeybindingHandler, useKeybindings } from './KeybindingContext';
 import { useTheme } from './ThemeContext';
 import i18n from './i18n';
 import type { ConnectionType, ConnectionOpts, ConnectionState, ToastMessage } from '../common/types';
-import type { PaneNode } from './components/SplitPane';
 
 interface TabState extends Tab {
   paneTree: PaneNode;
@@ -166,21 +166,6 @@ export default function App() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  useEffect(() => {
-    if (!broadcasting) return;
-    const handler = (e: Event) => {
-      const { sourcePaneId, data } = (e as CustomEvent).detail;
-      const allPaneIds = collectPaneIds(activeTab.paneTree);
-      allPaneIds.forEach((pid) => {
-        if (pid !== sourcePaneId) {
-          window.dispatchEvent(new CustomEvent('terminal:broadcast-recv', { detail: { targetPaneId: pid, data } }));
-        }
-      });
-    };
-    window.addEventListener('terminal:broadcast-send', handler);
-    return () => window.removeEventListener('terminal:broadcast-send', handler);
-  }, [broadcasting, activeTab]);
-
   const handleToggleBroadcast = useCallback(() => {
     setBroadcasting((prev) => !prev);
   }, []);
@@ -217,6 +202,21 @@ useEffect(() => {
             focusedLeaf.connectionType === 'telnet' ? `${(focusedLeaf.connectionOptions as any)?.host || ''}:${(focusedLeaf.connectionOptions as any)?.port || ''}` :
             undefined,
   } : undefined;
+
+  useEffect(() => {
+    if (!broadcasting) return;
+    const handler = (e: Event) => {
+      const { sourcePaneId, data } = (e as CustomEvent).detail;
+      const allPaneIds = collectPaneIds(activeTab.paneTree);
+      allPaneIds.forEach((pid) => {
+        if (pid !== sourcePaneId) {
+          window.dispatchEvent(new CustomEvent('terminal:broadcast-recv', { detail: { targetPaneId: pid, data } }));
+        }
+      });
+    };
+    window.addEventListener('terminal:broadcast-send', handler);
+    return () => window.removeEventListener('terminal:broadcast-send', handler);
+  }, [broadcasting, activeTab]);
 
   const handleNew = useCallback(() => {
     const tab = createTabState();

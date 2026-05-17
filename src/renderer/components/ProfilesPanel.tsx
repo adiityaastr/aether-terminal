@@ -88,6 +88,7 @@ export default function ProfilesPanel({ visible, onClose, onConnect }: Props) {
 
 function ProfileEditor({ profile, onSave, onCancel }: { profile: Profile; onSave: (p: Profile) => void; onCancel: () => void }) {
   const [p, setP] = useState<Profile>(profile);
+  const { t } = useTranslation();
 
   return (
     <div className="profile-editor">
