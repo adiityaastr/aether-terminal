@@ -11,6 +11,16 @@ interface AppConfig {
   gpuRenderer: boolean;
   windowOpacity: number;
   windowAcrylic: boolean;
+  cursorStyle: 'block' | 'underline' | 'bar';
+  cursorBlink: boolean;
+  copyOnSelect: boolean;
+  rightClickBehavior: 'contextMenu' | 'paste';
+  wordSeparator: string;
+  fontLigatures: boolean;
+  lineHeight: number;
+  letterSpacing: number;
+  terminalPadding: number;
+  bellStyle: 'none' | 'visual' | 'audible' | 'both';
 }
 
 interface ConfigContextValue {
@@ -20,6 +30,16 @@ interface ConfigContextValue {
   fontSize: number;
   fontFamily: string;
   gpuRenderer: boolean;
+  cursorStyle: 'block' | 'underline' | 'bar';
+  cursorBlink: boolean;
+  copyOnSelect: boolean;
+  rightClickBehavior: 'contextMenu' | 'paste';
+  wordSeparator: string;
+  fontLigatures: boolean;
+  lineHeight: number;
+  letterSpacing: number;
+  terminalPadding: number;
+  bellStyle: 'none' | 'visual' | 'audible' | 'both';
 }
 
 const ConfigContext = createContext<ConfigContextValue>(null!);
@@ -37,6 +57,16 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
     gpuRenderer: true,
     windowOpacity: 1.0,
     windowAcrylic: false,
+    cursorStyle: 'block',
+    cursorBlink: true,
+    copyOnSelect: false,
+    rightClickBehavior: 'contextMenu',
+    wordSeparator: " ()[]{}'\"，:;~!@#$%^&*|+=?<>",
+    fontLigatures: false,
+    lineHeight: 1.0,
+    letterSpacing: 0,
+    terminalPadding: 4,
+    bellStyle: 'none',
   });
 
   useEffect(() => {
@@ -67,6 +97,16 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
       fontSize: config.fontSize ?? 14,
       fontFamily: config.fontFamily ?? "'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace",
       gpuRenderer: config.gpuRenderer ?? true,
+      cursorStyle: config.cursorStyle ?? 'block',
+      cursorBlink: config.cursorBlink ?? true,
+      copyOnSelect: config.copyOnSelect ?? false,
+      rightClickBehavior: config.rightClickBehavior ?? 'contextMenu',
+      wordSeparator: config.wordSeparator ?? " ()[]{}'\"，:;~!@#$%^&*|+=?<>",
+      fontLigatures: config.fontLigatures ?? false,
+      lineHeight: config.lineHeight ?? 1.0,
+      letterSpacing: config.letterSpacing ?? 0,
+      terminalPadding: config.terminalPadding ?? 4,
+      bellStyle: config.bellStyle ?? 'none',
     }}>
       {children}
     </ConfigContext.Provider>

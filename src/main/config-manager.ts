@@ -29,6 +29,16 @@ export interface AppConfig {
   gpuRenderer: boolean;
   windowOpacity: number;
   windowAcrylic: boolean;
+  cursorStyle: 'block' | 'underline' | 'bar';
+  cursorBlink: boolean;
+  copyOnSelect: boolean;
+  rightClickBehavior: 'contextMenu' | 'paste';
+  wordSeparator: string;
+  fontLigatures: boolean;
+  lineHeight: number;
+  letterSpacing: number;
+  terminalPadding: number;
+  bellStyle: 'none' | 'visual' | 'audible' | 'both';
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -42,6 +52,16 @@ const DEFAULT_CONFIG: AppConfig = {
   gpuRenderer: true,
   windowOpacity: 1.0,
   windowAcrylic: false,
+  cursorStyle: 'block',
+  cursorBlink: true,
+  copyOnSelect: false,
+  rightClickBehavior: 'contextMenu',
+  wordSeparator: " ()[]{}'\"，:;~!@#$%^&*|+=?<>",
+  fontLigatures: false,
+  lineHeight: 1.0,
+  letterSpacing: 0,
+  terminalPadding: 4,
+  bellStyle: 'none',
 };
 
 const configDir = path.join(app.getPath('userData'));

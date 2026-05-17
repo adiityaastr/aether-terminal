@@ -33,6 +33,20 @@ export interface AppConfig {
   defaultProfile: string;
   profiles: Profile[];
   restoreSession: boolean;
+  scrollback: number;
+  gpuRenderer: boolean;
+  windowOpacity: number;
+  windowAcrylic: boolean;
+  cursorStyle: 'block' | 'underline' | 'bar';
+  cursorBlink: boolean;
+  copyOnSelect: boolean;
+  rightClickBehavior: 'contextMenu' | 'paste';
+  wordSeparator: string;
+  fontLigatures: boolean;
+  lineHeight: number;
+  letterSpacing: number;
+  terminalPadding: number;
+  bellStyle: 'none' | 'visual' | 'audible' | 'both';
 }
 
 export type ConnectionType = 'local' | 'ssh' | 'serial' | 'telnet';
