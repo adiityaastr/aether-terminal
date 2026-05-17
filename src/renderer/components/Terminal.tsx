@@ -163,10 +163,17 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       window.electronAPI.send('open-external', uri);
     });
 
-    xterm.loadAddon(fit);
-    xterm.loadAddon(search);
-    xterm.loadAddon(webLinks);
-    xterm.open(container);
+    try {
+      xterm.loadAddon(fit);
+      xterm.loadAddon(search);
+      xterm.loadAddon(webLinks);
+      xterm.open(container);
+    } catch (e) {
+      console.error('Failed to initialize terminal:', e);
+      xterm.dispose();
+      xtermRef.current = null;
+      return () => { mountedRef.current = false; };
+    }
     if (gpuRenderer !== false) {
       try {
         const webglAddon = new WebglAddon();
@@ -174,7 +181,9 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
         xterm.loadAddon(webglAddon);
       } catch {}
     }
-    fit.fit();
+    try {
+      fit.fit();
+    } catch {}
 
     xtermRef.current = xterm;
     fitRef.current = fit;

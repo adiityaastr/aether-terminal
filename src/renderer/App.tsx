@@ -192,9 +192,9 @@ useEffect(() => {
     });
   }, []);
 
-  const activeTab = tabs.find((t) => t.id === activeId)!;
+  const activeTab = tabs.find((t) => t.id === activeId);
 
-  const focusedLeaf = findLeafById(activeTab.paneTree, activeTab.focusedPaneId);
+  const focusedLeaf = activeTab ? findLeafById(activeTab.paneTree, activeTab.focusedPaneId) : null;
   const connectionInfo = focusedLeaf ? {
     type: focusedLeaf.connectionType || 'local',
     detail: focusedLeaf.connectionType === 'ssh' ? `${(focusedLeaf.connectionOptions as any)?.username || ''}@${(focusedLeaf.connectionOptions as any)?.host || ''}` :
@@ -204,7 +204,7 @@ useEffect(() => {
   } : undefined;
 
   useEffect(() => {
-    if (!broadcasting) return;
+    if (!broadcasting || !activeTab) return;
     const handler = (e: Event) => {
       const { sourcePaneId, data } = (e as CustomEvent).detail;
       const allPaneIds = collectPaneIds(activeTab.paneTree);
@@ -296,9 +296,9 @@ useEffect(() => {
       const idx = tabs.findIndex((t) => t.id === activeId);
       setActiveId(tabs[(idx - 1 + tabs.length) % tabs.length].id);
     },
-    'pane:splitH': () => handleSplit(activeTab.focusedPaneId, 'horizontal'),
-    'pane:splitV': () => handleSplit(activeTab.focusedPaneId, 'vertical'),
-    'pane:close': () => handleClosePane(activeTab.focusedPaneId),
+    'pane:splitH': () => activeTab && handleSplit(activeTab.focusedPaneId, 'horizontal'),
+    'pane:splitV': () => activeTab && handleSplit(activeTab.focusedPaneId, 'vertical'),
+    'pane:close': () => activeTab && handleClosePane(activeTab.focusedPaneId),
     'palette:open': () => setPaletteOpen(true),
     'broadcast:toggle': handleToggleBroadcast,
   });
@@ -310,9 +310,9 @@ useEffect(() => {
       { id: 'sftp:open', label: 'Open SFTP Browser', category: 'SFTP', action: () => setSftpOpen(true) },
       { id: 'history:open', label: i18n.t('history.title'), category: 'History', action: () => setHistoryOpen(true) },
         { id: 'update:check', label: i18n.t('update.check'), category: 'Help', action: () => window.electronAPI.invoke('update:check') },
-      { id: 'pane:splitH', label: 'Split Horizontal', category: 'Pane', action: () => handleSplit(activeTab.focusedPaneId, 'horizontal') },
-      { id: 'pane:splitV', label: 'Split Vertical', category: 'Pane', action: () => handleSplit(activeTab.focusedPaneId, 'vertical') },
-      { id: 'pane:close', label: 'Close Pane', category: 'Pane', action: () => handleClosePane(activeTab.focusedPaneId) },
+      { id: 'pane:splitH', label: 'Split Horizontal', category: 'Pane', action: () => activeTab && handleSplit(activeTab.focusedPaneId, 'horizontal') },
+      { id: 'pane:splitV', label: 'Split Vertical', category: 'Pane', action: () => activeTab && handleSplit(activeTab.focusedPaneId, 'vertical') },
+      { id: 'pane:close', label: 'Close Pane', category: 'Pane', action: () => activeTab && handleClosePane(activeTab.focusedPaneId) },
       { id: 'buffer:export', label: 'Export Buffer to File', category: 'Terminal', shortcut: 'Ctrl+Shift+S', action: () => window.dispatchEvent(new Event('terminal:exportBuffer')) },
       { id: 'broadcast:toggle', label: i18n.t('broadcast.toggle'), category: 'Pane', shortcut: bindings.find((b) => b.id === 'broadcast:toggle')?.key, action: handleToggleBroadcast },
       ...availableThemes.map((t) => ({
@@ -357,8 +357,8 @@ useEffect(() => {
         onNew={handleNew}
         onNewConnection={() => setConnDialogOpen(true)}
         onSettings={() => setSettingsOpen(true)}
-        onSplitH={() => handleSplit(activeTab.focusedPaneId, 'horizontal')}
-        onSplitV={() => handleSplit(activeTab.focusedPaneId, 'vertical')}
+        onSplitH={() => activeTab && handleSplit(activeTab.focusedPaneId, 'horizontal')}
+        onSplitV={() => activeTab && handleSplit(activeTab.focusedPaneId, 'vertical')}
         onClear={() => window.dispatchEvent(new Event('terminal:clear'))}
         broadcasting={broadcasting}
         onToggleBroadcast={handleToggleBroadcast}
@@ -408,7 +408,7 @@ useEffect(() => {
       <CommandHistoryPanel visible={historyOpen} onClose={() => setHistoryOpen(false)} />
       <NotificationToast toasts={toasts} onDismiss={dismissToast} />
       <UpdateNotification />
-      <StatusBar connectionInfo={connectionInfo} cwd={paneCwds[activeTab.focusedPaneId]} />
+      <StatusBar connectionInfo={connectionInfo} cwd={activeTab ? paneCwds[activeTab.focusedPaneId] : undefined} />
     </div>
   );
 }
