@@ -531,7 +531,10 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
     window.addEventListener('terminal:exportBuffer', exportBufferHandler);
 
     const onResize = () => {
-      fit.fit();
+      if (!mountedRef.current) return;
+      try {
+        fit.fit();
+      } catch {}
       const currentId = sessionIdRef.current;
       if (currentId) {
         if (connectionType === 'local') window.electronAPI.send('pty:resize', currentId, xterm.cols, xterm.rows);
@@ -561,6 +564,10 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
         else if (connectionType === 'telnet') window.electronAPI.send('telnet:disconnect', currentId);
       }
       xterm.dispose();
+      xtermRef.current = null;
+      fitRef.current = null;
+      searchRef.current = null;
+      sessionIdRef.current = null;
     };
   }, [reconnectKey]);
 
