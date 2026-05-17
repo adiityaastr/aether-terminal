@@ -142,6 +142,23 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
     const container = containerRef.current;
     if (!container) return;
 
+    // If container is hidden (display: none from inactive tab), defer init until visible
+    if (container.offsetWidth === 0 || container.offsetHeight === 0) {
+      let cancelled = false;
+      const observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !cancelled) {
+          observer.disconnect();
+          initTerminalInContainer(container);
+        }
+      }, { threshold: 0 });
+      observer.observe(container);
+      return () => { cancelled = true; observer.disconnect(); };
+    }
+
+    return initTerminalInContainer(container);
+  }, [reconnectKey]);
+
+  function initTerminalInContainer(container: HTMLDivElement): () => void {
     mountedRef.current = true;
     setConnectionState('connecting');
 
@@ -578,7 +595,7 @@ const Terminal = forwardRef<TerminalHandle, TerminalProps>(({
       searchRef.current = null;
       sessionIdRef.current = null;
     };
-  }, [reconnectKey]);
+  }
 
   useEffect(() => {
     if (xtermRef.current) {
